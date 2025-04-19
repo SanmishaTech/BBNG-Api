@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int       @id @default(autoincrement())
+   name               String
+  email              String    @unique
+   password           String
+  role               String
+  active             Boolean   @default(true)
+  lastLogin          DateTime?
+  resetToken         String?   
+  resetTokenExpires  DateTime?
+   createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Zone {
+  id        Int      @id @default(autoincrement())
+  name      String
+  active    Boolean  @default(true)
+  locations Location[] // Add this field for the reverse relation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("zones")
+}
+
+model Location {
+  id        Int      @id @default(autoincrement())
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+  zoneId    Int
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("locations")
+}
+
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name                  String    
+  description           String
+    createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("category")
+}
