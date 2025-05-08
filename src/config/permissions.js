@@ -18,6 +18,21 @@ module.exports = {
   "zones.read": ["super_admin", "admin"],
   "zones.write": ["super_admin"],
   "zones.delete": ["super_admin"],
+  //trainings
+  "trainings.read": ["super_admin", "admin"],
+  "trainings.write": ["super_admin", "admin"],
+  "trainings.update": ["super_admin", "admin"],
+  "trainings.delete": ["super_admin"],
+  //categories
+  "categories.read": ["super_admin", "admin"],
+  "categories.write": ["super_admin", "admin"],
+  "categories.update": ["super_admin", "admin"],
+  "categories.delete": ["super_admin"],
+  //messages
+  "messages.read": ["super_admin", "admin"],
+  "messages.write": ["super_admin", "admin"],
+  "messages.update": ["super_admin", "admin"],
+  "messages.delete": ["super_admin"],
   //superAdmin and admin sections
   //branches
   "branches.read": ["super_admin", "admin"],

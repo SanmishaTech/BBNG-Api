@@ -1,8 +1,8 @@
 const multer = require("multer");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
-const fs = require("fs").promises; // Use promises API
-// const mime = require('mime-types'); // Not strictly needed in this version
+const fsPromises = require("fs").promises;
+const fs = require("fs"); // For sync operations
 
 /**
  * Configuration for a single upload field.
@@ -23,7 +23,27 @@ const fs = require("fs").promises; // Use promises API
  * @param {string} [uploadDir='uploads'] - The base directory for uploads.
  * @returns {Function[]} Array of Express middleware functions.
  */
-function createUploadMiddleware(moduleName, fields, uploadDir = "uploads") {
+const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
+  // Create a storage object for multer
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      // Get the field name (e.g., profilePicture1)
+      const fieldName = file.fieldname;
+      // Construct the full path: uploads/members/profilePicture1 etc.
+      const fullPath = path.join(uploadDir, moduleName, fieldName);
+
+      // Create directory if it doesn't exist
+      fs.mkdirSync(fullPath, { recursive: true });
+      cb(null, fullPath);
+    },
+    filename: (req, file, cb) => {
+      // Generate a unique filename
+      const uniqueId = uuidv4();
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueId + ext);
+    },
+  });
+
   // --- Input Validation ---
   if (typeof moduleName !== "string" || moduleName.trim() === "") {
     throw new Error("Invalid moduleName provided. Must be a non-empty string.");
@@ -101,7 +121,7 @@ function createUploadMiddleware(moduleName, fields, uploadDir = "uploads") {
         // Let fs.rm handle the recursive removal if it exists.
 
         // Use fs.rm with recursive option to remove the UUID directory and its contents for this field
-        await fs.rm(targetDir, { recursive: true, force: true }); // force:true suppresses ENOENT errors
+        await fsPromises.rm(targetDir, { recursive: true, force: true }); // force:true suppresses ENOENT errors
         console.log(
           `[Cleanup:${requestUUID}] Successfully checked/removed directory: ${targetDir}`
         );
@@ -135,60 +155,6 @@ function createUploadMiddleware(moduleName, fields, uploadDir = "uploads") {
     // req.uploadUUID = null; // Keep for logging?
     // req.uploadModuleName = null;
   }
-
-  // --- Multer Storage Configuration ---
-  const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-      // Get request-specific UUID and moduleName
-      const requestUUID = req.uploadUUID;
-      const requestModuleName = req.uploadModuleName;
-
-      if (!requestUUID || !requestModuleName) {
-        console.error(
-          `[Destination Error] Missing requestUUID (${requestUUID}) or requestModuleName (${requestModuleName}) on req!`
-        );
-        return cb(
-          new Error("Upload configuration error (UUID/Module missing).")
-        );
-      }
-
-      // Construct path: <uploadDir>/<moduleName>/<fieldname>/<uuid>
-      const finalDestinationPath = path.join(
-        uploadDir,
-        requestModuleName,
-        file.fieldname,
-        requestUUID
-      );
-
-      try {
-        // Ensure this specific directory exists
-        await fs.mkdir(finalDestinationPath, { recursive: true });
-        cb(null, finalDestinationPath); // Save the file here
-      } catch (err) {
-        console.error(
-          `[Destination Error:${requestUUID}] Error creating destination directory: ${finalDestinationPath}`,
-          err
-        );
-        cb(err);
-      }
-    },
-    filename: (req, file, cb) => {
-      // Keep the original filename logic, but ensure it's safe
-      const extension = path.extname(file.originalname);
-      const baseName = path.basename(file.originalname, extension);
-      // Sanitize basename more thoroughly
-      const safeBaseName = baseName
-        .replace(/[^a-zA-Z0-9_-]/g, "_")
-        .substring(0, 100); // Limit length
-      // Using only UUID and original safe name + extension is usually sufficient and avoids collisions within the UUID folder
-      const finalFilename = `${safeBaseName}${extension}`;
-      // Alternative: Add timestamp for extra uniqueness if needed, though UUID dir usually suffices
-      // const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E6);
-      // const finalFilename = `${safeBaseName}-${uniqueSuffix}${extension}`;
-
-      cb(null, finalFilename);
-    },
-  });
 
   // --- Multer Instance ---
   const upload = multer({
@@ -485,6 +451,6 @@ function createUploadMiddleware(moduleName, fields, uploadDir = "uploads") {
     // It's better placed where it is, invoked directly by the multer callback.
     // We might add a final *general* error handler for the route later if needed.
   ];
-}
+};
 
 module.exports = createUploadMiddleware;

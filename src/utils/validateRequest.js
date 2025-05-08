@@ -1,31 +1,68 @@
-const validateRequest = (schema, data, res, file) => {
-  return new Promise(async (resolve, reject) => {
-    const result = await schema.safeParseAsync(data);
+const createError = require("http-errors");
+const { z } = require("zod");
+const path = require("path");
 
-    if (!result.success) {
-      // Build an object keyed by "dot.path" → { type, message }
-      const errors = {};
-      // grabs the result and parses the errors from the zod safe parse function
-      result.error.errors.forEach((e) => {
-        const name = e.path.length ? e.path.join(".") : "_error";
-        errors[name] = {
-          type: "server", // you can choose 'server' or 'manual'
-          message: e.message, // the Zod‐generated message
-        };
-      });
+/**
+ * Validate request data against a schema
+ * @param {z.Schema} schema - Zod schema to validate against
+ * @param {Object} data - Request data to validate
+ * @param {Object} files - Request files (optional)
+ * @returns {Object|null} Validated data or null if validation fails
+ */
+const validateRequest = async (schema, data, files = {}) => {
+  try {
+    // Convert number strings to actual numbers for specified fields
+    const parsedData = { ...data };
 
-      // e.g. { errors: { "user.name": { type:"server", message:"..." }, ... } }
-      // return res.status(400).json({ errors });
-      if (file) {
-        resolve(errors); // Changed from return to resolve
-      } else {
-        return res.status(400).json({ errors });
-      }
-      return;
+    // Handle numeric fields that might come as strings
+    if (parsedData.chapterId) {
+      parsedData.chapterId = Number(parsedData.chapterId);
     }
 
-    resolve(result.data);
-  });
+    // Clean up empty profile picture objects from JSON data
+    ["profilePicture1", "profilePicture2", "profilePicture3"].forEach(
+      (field) => {
+        if (parsedData[field] && Object.keys(parsedData[field]).length === 0) {
+          delete parsedData[field];
+        }
+      }
+    );
+
+    // Handle file uploads if present
+    if (files) {
+      ["profilePicture1", "profilePicture2", "profilePicture3"].forEach(
+        (field) => {
+          if (files[field] && files[field][0]) {
+            // Get the UUID from the file path
+            const pathParts = files[field][0].path.split(path.sep);
+            const uuid = pathParts[pathParts.indexOf(field) + 1];
+
+            // Construct the relative path that matches the URL structure
+            const relativePath = path
+              .join("uploads", "members", field, uuid, files[field][0].filename)
+              .replace(/\\/g, "/"); // Ensure forward slashes for URLs
+
+            parsedData[field] = relativePath;
+          }
+        }
+      );
+    }
+
+    const validatedData = await schema.parseAsync(parsedData);
+    return validatedData;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors = {};
+      error.errors.forEach((err) => {
+        errors[err.path[0]] = {
+          type: "validation",
+          message: err.message,
+        };
+      });
+      throw createError(400, "Validation failed", { errors });
+    }
+    throw error;
+  }
 };
 
 module.exports = validateRequest;
