@@ -102,19 +102,7 @@ model Chapter {
   meetingday         String
   status             Boolean  @default(false)
   venue              String
-  monthlyVenue       Int
-  quarterlyVenue     Int
-  halfYearlyVenue    Int
-  yearlyVenue        Int
-  earlybirdVenue     Int
-  quarterlyHo        Int
-  halfyearlyHo       Int
-  yearlyHo           Int
-  earlybirdHo        Int
-  bankopeningbalance Int
-  bankclosingbalance Int
-  cashopeningbalance Int
-  cashclosingbalance Int
+ 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -160,12 +148,13 @@ model Member {
   profilePicture1 String?
   profilePicture2 String?
   profilePicture3 String?
-
+  hoExpiryDate    DateTime?
+  venueExpiryDate DateTime?
   email    String @unique
   password String
 
   users    User?   @relation("UserMemberRelation", fields: [userId], references: [id])
-  userId   Int    @unique // Foreign key to User model
+  userId   Int?    @unique // Foreign key to User model
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
