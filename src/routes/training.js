@@ -1,51 +1,41 @@
-/**
- * Express Router configuration for Category management endpoints.
- *
- * This file defines the routes for handling CRUD operations on categories,
- * including fetching, creating, updating, and deleting categories.
- * It utilizes authentication and access control list (ACL) middleware
- * to secure the endpoints and includes Swagger documentation annotations.
- *
- * @module routes/categoryRoutes
- */
-
 const express = require("express");
 const router = express.Router();
-const categoryController = require("../controllers/categoryController");
+const trainingController = require("../controllers/trainingController");
 const auth = require("../middleware/auth");
 const acl = require("../middleware/acl");
 
 /**
  * @swagger
  * tags:
- *   name: Business Categories
- *   description: Business category management endpoints
+ *   name: Trainings
+ *   description: Training schedule endpoints
  */
 
 /**
  * @swagger
  * components:
  *   schemas:
- *     Category:
+ *     Training:
  *       type: object
  *       required:
- *         - name
- *         - description
+ *         - trainingDate
+ *         - trainingTopic
  *       properties:
  *         id:
  *           type: integer
- *         name:
+ *         trainingDate:
  *           type: string
- *         description:
+ *           format: date-time
+ *         trainingTopic:
  *           type: string
  */
 
 /**
  * @swagger
- * /categories:
+ * /trainings:
  *   get:
- *     summary: List all business categories
- *     tags: [Business Categories]
+ *     summary: List all trainings
+ *     tags: [Trainings]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: query
@@ -82,25 +72,25 @@ const acl = require("../middleware/acl");
  *             schema:
  *               type: object
  *               properties:
- *                 categories:
+ *                 trainings:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Category'
+ *                     $ref: '#/components/schemas/Training'
  *                 page:
  *                   type: integer
  *                 totalPages:
  *                   type: integer
- *                 totalCategories:
+ *                 totalTrainings:
  *                   type: integer
  */
-router.get("/", auth, acl("categories.read"), categoryController.getCategories);
+router.get("/", auth, acl("trainings.read"), trainingController.getTrainings);
 
 /**
  * @swagger
- * /categories/{id}:
+ * /trainings/{id}:
  *   get:
- *     summary: Get category by ID
- *     tags: [Business Categories]
+ *     summary: Get training by ID
+ *     tags: [Trainings]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -113,18 +103,18 @@ router.get("/", auth, acl("categories.read"), categoryController.getCategories);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Category'
+ *               $ref: '#/components/schemas/Training'
  *       404:
- *         description: Category not found
+ *         description: Training not found
  */
-router.get("/:id", auth, acl("categories.read"), categoryController.getCategoryById);
+router.get("/:id", auth, acl("trainings.read"), trainingController.getTrainingById);
 
 /**
  * @swagger
- * /categories:
+ * /trainings:
  *   post:
- *     summary: Create a new business category
- *     tags: [Business Categories]
+ *     summary: Schedule a new training
+ *     tags: [Trainings]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
@@ -132,32 +122,33 @@ router.get("/:id", auth, acl("categories.read"), categoryController.getCategoryB
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, description]
+ *             required: [trainingDate, trainingTopic]
  *             properties:
- *               name: 
+ *               trainingDate: 
  *                 type: string
- *                 description: Category name
- *               description: 
+ *                 format: date-time
+ *                 description: Date of the training
+ *               trainingTopic: 
  *                 type: string
- *                 description: Category description
+ *                 description: Topic of the training
  *     responses:
  *       201:
  *         description: Created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Category'
+ *               $ref: '#/components/schemas/Training'
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, acl("categories.write"), categoryController.createCategory);
+router.post("/", auth, acl("trainings.write"), trainingController.createTraining);
 
 /**
  * @swagger
- * /categories/{id}:
+ * /trainings/{id}:
  *   put:
- *     summary: Update a business category
- *     tags: [Business Categories]
+ *     summary: Update a training schedule
+ *     tags: [Trainings]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -170,30 +161,31 @@ router.post("/", auth, acl("categories.write"), categoryController.createCategor
  *           schema:
  *             type: object
  *             properties:
- *               name: 
+ *               trainingDate: 
  *                 type: string
- *                 description: Category name
- *               description: 
+ *                 format: date-time
+ *                 description: Date of the training
+ *               trainingTopic: 
  *                 type: string
- *                 description: Category description
+ *                 description: Topic of the training
  *     responses:
  *       200:
  *         description: OK
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Category'
+ *               $ref: '#/components/schemas/Training'
  *       404:
- *         description: Category not found
+ *         description: Training not found
  */
-router.put("/:id", auth, acl("categories.update"), categoryController.updateCategory);
+router.put("/:id", auth, acl("trainings.update"), trainingController.updateTraining);
 
 /**
  * @swagger
- * /categories/{id}:
+ * /trainings/{id}:
  *   delete:
- *     summary: Delete a business category
- *     tags: [Business Categories]
+ *     summary: Cancel a training
+ *     tags: [Trainings]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -202,7 +194,7 @@ router.put("/:id", auth, acl("categories.update"), categoryController.updateCate
  *         schema: { type: integer }
  *     responses:
  *       200:
- *         description: Category deleted successfully
+ *         description: Training deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -211,8 +203,8 @@ router.put("/:id", auth, acl("categories.update"), categoryController.updateCate
  *                 message:
  *                   type: string
  *       404:
- *         description: Category not found
+ *         description: Training not found
  */
-router.delete("/:id", auth, acl("categories.delete"), categoryController.deleteCategory);
+router.delete("/:id", auth, acl("trainings.delete"), trainingController.deleteTraining);
 
 module.exports = router;

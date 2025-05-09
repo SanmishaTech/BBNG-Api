@@ -10,7 +10,14 @@ const authRoutes = require("./routes/auth");
 const zoneRoutes = require("./routes/zones");
 const locationRoutes = require("./routes/location");
 const categoryRoutes = require("./routes/category");
+const trainingRoutes = require("./routes/training");
+const siteRoutes = require("./routes/site");
+const messageRoutes = require("./routes/messages");
+const chapterRoutes = require("./routes/chapters");
+const memberRoutes = require("./routes/members");
+
 const swaggerRouter = require("./swagger");
+
 const path = require("path");
 const config = require("./config/config");
 const app = express();
@@ -37,7 +44,12 @@ app.use("/roles", roleRoutes);
 app.use("/users", userRoutes);
 app.use("/zones", zoneRoutes);
 app.use("/locations", locationRoutes);
+app.use("/trainings", trainingRoutes);
 app.use("/categories", categoryRoutes);
+app.use("/sites", siteRoutes); // Ensure this line is included to handle site routes
+app.use("/messages", messageRoutes); // Add this line to include message routes
+app.use("/chapters", chapterRoutes);
+app.use("/api/members", memberRoutes);
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {

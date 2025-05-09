@@ -8,49 +8,157 @@ datasource db {
 }
 
 model User {
-  id                 Int       @id @default(autoincrement())
-   name               String
-  email              String    @unique
-   password           String
-  role               String
-  active             Boolean   @default(true)
-  lastLogin          DateTime?
-  resetToken         String?   
-  resetTokenExpires  DateTime?
-   createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                Int       @id @default(autoincrement())
+  name              String
+  email             String    @unique
+  password          String
+  role              String
+  active            Boolean   @default(true)
+  lastLogin         DateTime?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
+  member            Member?   @relation("UserMemberRelation")
+  memberId          Int?      // This field still exists. If Member.userId is the true FK for the 
+ 
   @@map("users")
 }
 
 model Zone {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
-  active    Boolean  @default(true)
+  active    Boolean   @default(true)
   locations Location[] // Add this field for the reverse relation
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  chapters  Chapter[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("zones")
 }
 
 model Location {
-  id        Int      @id @default(autoincrement())
-  zone      Zone     @relation(fields: [zoneId], references: [id])
+  id        Int       @id @default(autoincrement())
+  zone      Zone      @relation(fields: [zoneId], references: [id])
   zoneId    Int
   location  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  chapters  Chapter[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) // Note: This was @default(now()), typically updatedAt should be @updatedAt
 
   @@map("locations")
 }
 
-
 model Category {
-  id        Int      @id @default(autoincrement())
-  name                  String    
-  description           String
-    createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+
   @@map("category")
+}
+
+model SiteSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) // Note: Consider @updatedAt
+
+  @@map("site_settings")
+}
+
+model Training {
+  id            Int      @id @default(autoincrement())
+  trainingDate  DateTime
+  trainingTopic String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) // Note: Consider @updatedAt
+
+  @@map("trainings")
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  heading    String   @db.VarChar(255)
+  powerteam  String   @db.VarChar(100)
+  message    String   @db.Text
+  attachment String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) // Note: Consider @updatedAt
+}
+
+model Chapter {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  zones              Zone     @relation(fields: [zoneId], references: [id])
+  zoneId             Int
+  location           Location @relation(fields: [locationId], references: [id])
+  locationId         Int
+  date               DateTime
+  meetingday         String
+  status             Boolean  @default(false)
+  venue              String
+ 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members Member[]
+
+  @@map("chapters")
+}
+
+model Member {
+  id                      Int       @id @default(autoincrement())
+  memberName              String
+  chapterId               Int?
+  chapter                 Chapter?  @relation(fields: [chapterId], references: [id])
+  category                String
+  businessCategory        String
+  gender                  String
+  dateOfBirth             DateTime
+  mobile1                 String
+  mobile2                 String?
+  gstNo                   String?
+  organizationName        String
+  businessTagline         String?
+  organizationMobileNo    String
+  organizationLandlineNo  String?
+  organizationEmail       String?
+  orgAddressLine1         String
+  orgAddressLine2         String?
+  orgLocation             String
+  orgPincode              String
+  organizationWebsite     String?   @db.Text
+  organizationDescription String?   @db.Text
+
+  addressLine1 String
+  location     String
+  addressLine2 String?
+  pincode      String
+
+  specificAsk  String? @db.Text
+  specificGive String? @db.Text
+  clients      String? @db.Text
+
+  profilePicture1 String?
+  profilePicture2 String?
+  profilePicture3 String?
+  hoExpiryDate    DateTime?
+  venueExpiryDate DateTime?
+  email    String @unique
+  password String
+
+  users    User?   @relation("UserMemberRelation", fields: [userId], references: [id])
+  userId   Int?    @unique // Foreign key to User model
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("members")
 }

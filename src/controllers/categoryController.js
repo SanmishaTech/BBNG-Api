@@ -9,6 +9,9 @@
 
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { z } = require("zod");
+const validateRequest = require("../utils/validateRequest");
+const createError = require("http-errors");
 
 /**
  * @function getCategories
@@ -18,62 +21,43 @@ const prisma = new PrismaClient();
  * @param {object} res - Express response object.
  * @returns {Promise<void>} Sends a JSON response with the list of categories or an error message.
  */
-exports.getCategories = async (req, res) => {
+const getCategories = async (req, res, next) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      search = "",
-      sortBy = "id",
-      sortOrder = "asc",
-      export: exportData = false,
-    } = req.query;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
-
-    // Build where clause for search
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search } },
-            { description: { contains: search } },
-          ],
-        }
-      : {};
-
-    // Build orderBy object
-    const orderBy = { [sortBy]: sortOrder.toLowerCase() };
-
-    // Get total count for pagination
-    const totalCategories = await prisma.category.count({ where });
-    const totalPages = Math.ceil(totalCategories / take);
-
-    // Export all data if requested
-    if (exportData === "true" || exportData === true) {
-      const allCategories = await prisma.category.findMany({ where, orderBy });
-      return res.status(200).json({ success: true, data: allCategories });
-    }
-
-    // Fetch paginated data
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+    const sortBy = req.query.sortBy || "name";
+    const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
+    
+    // Build the where clause for filtering
+    const whereClause = {
+      OR: [
+        { name: { contains: search } },
+        { description: { contains: search } }
+      ]
+    };
+    
     const categories = await prisma.category.findMany({
-      where,
-      orderBy,
+      where: whereClause,
       skip,
-      take,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder }
     });
-
-    res.status(200).json({
-      totalCategories,
-      page: parseInt(page),
-      totalPages,
+    
+    const totalCategories = await prisma.category.count({
+      where: whereClause
+    });
+    const totalPages = Math.ceil(totalCategories / limit);
+    
+    res.json({
       categories,
+      page,
+      totalPages,
+      totalCategories
     });
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching categories", error: error.message });
+    next(createError(500, "Failed to fetch categories", { cause: error }));
   }
 };
 
@@ -84,45 +68,55 @@ exports.getCategories = async (req, res) => {
  * @param {object} res - Express response object.
  * @returns {Promise<void>} Sends a JSON response with the created category or an error message.
  */
-exports.createCategory = async (req, res) => {
+const createCategory = async (req, res, next) => {
+  // Define Zod schema for category creation
+  const schema = z.object({
+    name: z.string()
+      .min(1, "Category name cannot be empty")
+      .max(255, "Category name must not exceed 255 characters"),
+    description: z.string()
+      .min(1, "Description cannot be empty")
+      .max(1000, "Description must not exceed 1000 characters")
+  }).superRefine(async (data, ctx) => {
+    // Check if a category with the same name already exists
+    const existingCategory = await prisma.category.findFirst({
+      where: { name: data.name }
+    });
+
+    if (existingCategory) {
+      ctx.addIssue({
+        path: ["name"],
+        message: `Category with name ${data.name} already exists.`,
+      });
+    }
+  });
+
+  // Validate the request body using Zod
+  console.log('Create Category - Request received:', req.body);
+  const validationResult = await validateRequest(schema, req.body, res);
+  console.log('Create Category - Validation result:', validationResult);
+  
+  // If validation failed, response is already sent by validateRequest
+  if (!validationResult) return;
+
   try {
-    const { name, description } = req.body;
-
-    if (
-      !name ||
-      typeof name !== "string" ||
-      name.trim() === "" ||
-      !description ||
-      typeof description !== "string" ||
-      description.trim() === ""
-    ) {
-      return res.status(400).json({
-        message:
-          "Name and description are required and must be non-empty strings.",
-      });
-    }
-
-    // Check if category with same name exists
-    const existing = await prisma.category.findFirst({
-      where: { name: name.trim() },
-    });
-    if (existing) {
-      return res.status(400).json({
-        message: `Category with name '${name.trim()}' already exists.`,
-      });
-    }
-
-    // Create category
     const newCategory = await prisma.category.create({
-      data: { name: name.trim(), description: description.trim() },
+      data: {
+        name: req.body.name,
+        description: req.body.description
+      }
     });
-
+    
     res.status(201).json(newCategory);
   } catch (error) {
-    console.error("Error creating category:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating category", error: error.message });
+    // Handle specific error types
+    if (error.code === 'P2002') {
+      return res.status(400).json({
+        errors: { message: "A category with this name already exists" }
+      });
+    }
+    
+    next(createError(500, "Failed to create category", { cause: error }));
   }
 };
 
@@ -133,30 +127,27 @@ exports.createCategory = async (req, res) => {
  * @param {object} res - Express response object.
  * @returns {Promise<void>} Sends a JSON response with the category data or an error message.
  */
-exports.getCategoryById = async (req, res) => {
+const getCategoryById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-
-    if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid Category ID provided." });
+    const id = Number(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({
+        errors: { message: "Invalid category ID" }
+      });
     }
-
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
-    });
+    
+    const category = await prisma.category.findUnique({ where: { id } });
+    
     if (!category) {
-      return res
-        .status(404)
-        .json({ message: `Category with ID ${categoryId} not found.` });
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
     }
-
-    res.status(200).json(category);
+    
+    res.json(category);
   } catch (error) {
-    console.error(`Error fetching category with ID ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({ message: "Error fetching category", error: error.message });
+    next(createError(500, "Failed to fetch category", { cause: error }));
   }
 };
 
@@ -167,64 +158,90 @@ exports.getCategoryById = async (req, res) => {
  * @param {object} res - Express response object.
  * @returns {Promise<void>} Sends a JSON response with the updated category or an error message.
  */
-exports.updateCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description } = req.body;
-    const categoryId = parseInt(id);
-
-    if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid Category ID provided." });
-    }
-
-    const updateData = {};
-    if (name) {
-      if (typeof name !== "string" || name.trim() === "") {
-        return res
-          .status(400)
-          .json({ message: "Name must be a non-empty string." });
-      }
-      // Check uniqueness
-      const duplicate = await prisma.category.findFirst({
-        where: { name: name.trim(), NOT: { id: categoryId } },
+const updateCategory = async (req, res, next) => {
+  const id = Number(req.params.id);
+  
+  if (isNaN(id)) {
+    return res.status(400).json({
+      errors: { message: "Invalid category ID" }
+    });
+  }
+  
+  // Define Zod schema for category update
+  const schema = z.object({
+    name: z.string()
+      .min(1, "Category name cannot be empty")
+      .max(255, "Category name must not exceed 255 characters")
+      .optional(),
+    description: z.string()
+      .min(1, "Description cannot be empty")
+      .max(1000, "Description must not exceed 1000 characters")
+      .optional()
+  }).refine(data => Object.keys(data).length > 0, {
+    message: "At least one field must be provided for update"
+  }).superRefine(async (data, ctx) => {
+    if (data.name) {
+      // Check if another category with the same name already exists
+      const existingCategory = await prisma.category.findFirst({
+        where: { 
+          name: data.name,
+          id: { not: id }
+        }
       });
-      if (duplicate) {
-        return res.status(400).json({
-          message: `Another category with name '${name.trim()}' already exists.`,
+
+      if (existingCategory) {
+        ctx.addIssue({
+          path: ["name"],
+          message: `Category with name ${data.name} already exists.`,
         });
       }
-      updateData.name = name.trim();
     }
-    if (description) {
-      if (typeof description !== "string" || description.trim() === "") {
-        return res
-          .status(400)
-          .json({ message: "Description must be a non-empty string." });
-      }
-      updateData.description = description.trim();
-    }
+  });
 
-    if (Object.keys(updateData).length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No valid data provided for update." });
-    }
+  // Validate the request body using Zod
+  console.log('Update Category - Request received:', req.body);
+  const validationResult = await validateRequest(schema, req.body, res);
+  console.log('Update Category - Validation result:', validationResult);
+  
+  // If validation failed, response is already sent by validateRequest
+  if (!validationResult) return;
 
-    const updated = await prisma.category.update({
-      where: { id: categoryId },
-      data: updateData,
+  try {
+    // First check if the category exists
+    const existingCategory = await prisma.category.findUnique({
+      where: { id }
     });
-    res.status(200).json(updated);
+    
+    if (!existingCategory) {
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
+    }
+    
+    const data = {};
+    
+    if (req.body.name) {
+      data.name = req.body.name;
+    }
+    
+    if (req.body.description) {
+      data.description = req.body.description;
+    }
+    
+    const updatedCategory = await prisma.category.update({
+      where: { id },
+      data
+    });
+    
+    res.json(updatedCategory);
   } catch (error) {
     if (error.code === "P2025") {
-      return res
-        .status(404)
-        .json({ message: `Category with ID ${req.params.id} not found.` });
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
     }
-    console.error(`Error updating category with ID ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({ message: "Error updating category", error: error.message });
+    
+    next(createError(500, "Failed to update category", { cause: error }));
   }
 };
 
@@ -235,26 +252,45 @@ exports.updateCategory = async (req, res) => {
  * @param {object} res - Express response object.
  * @returns {Promise<void>} Sends a JSON response confirming deletion or an error message.
  */
-exports.deleteCategory = async (req, res) => {
+const deleteCategory = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-
-    if (isNaN(categoryId)) {
-      return res.status(400).json({ message: "Invalid Category ID provided." });
+    const id = Number(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({
+        errors: { message: "Invalid category ID" }
+      });
     }
-
-    await prisma.category.delete({ where: { id: categoryId } });
-    res.status(200).json({ message: "Category deleted successfully" });
+    
+    // First check if the category exists
+    const existingCategory = await prisma.category.findUnique({
+      where: { id }
+    });
+    
+    if (!existingCategory) {
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
+    }
+    
+    await prisma.category.delete({ where: { id } });
+    
+    res.json({ message: "Category deleted successfully" });
   } catch (error) {
     if (error.code === "P2025") {
-      return res
-        .status(404)
-        .json({ message: `Category with ID ${req.params.id} not found.` });
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
     }
-    console.error(`Error deleting category with ID ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({ message: "Error deleting category", error: error.message });
+    
+    next(createError(500, "Failed to delete category", { cause: error }));
   }
+};
+
+module.exports = {
+  getCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory
 };
