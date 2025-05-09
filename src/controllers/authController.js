@@ -207,6 +207,7 @@ const forgotPassword = async (req, res, next) => {
       .email("Invalid Email format")
       .nonempty("Email is required"),
   });
+  console.log("Forgot password request:", req.body);
 
   try {
     const validationErrors = await validateRequest(schema, req.body, res);
@@ -246,6 +247,7 @@ const forgotPassword = async (req, res, next) => {
 };
 
 const resetPassword = async (req, res, next) => {
+  console.log("Reset password request:", req.body);
   const schema = z.object({
     password: z.string().min(6, "Password must be at least 6 characters long"),
   });

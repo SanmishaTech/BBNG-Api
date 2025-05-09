@@ -237,6 +237,25 @@ const createMember = asyncHandler(async (req, res) => {
         },
       };
 
+      // Handle file uploads if present
+      if (req.files) {
+        Object.entries(req.files).forEach(([key, files]) => {
+          if (Array.isArray(files) && files.length > 0) {
+            const file = files[0];
+            // Build the complete path using the UUID from the request
+            const uuid = req.fileUUID[key];
+            const fullPath = path.join(
+              "uploads",
+              "members",
+              key,
+              uuid,
+              file.originalname
+            );
+            memberData[key] = fullPath; // Store the complete path
+          }
+        });
+      }
+
       // Conditionally connect to chapter
       if (chapterId) {
         memberData.chapter = {
@@ -525,14 +544,262 @@ const getMemberById = asyncHandler(async (req, res) => {
 // Placeholder for other controller functions (getMembers, getMemberById, etc.)
 // Ensure they are defined or imported if this file is meant to be complete.
 const updateMember = asyncHandler(async (req, res) => {
-  /* ... existing code ... */
+  const { id } = req.params;
+
+  if (!id || isNaN(parseInt(id))) {
+    throw createError(400, "Invalid member ID provided");
+  }
+
+  try {
+    // Find the member first to check if they exist
+    const existingMember = await prisma.member.findUnique({
+      where: { id: parseInt(id) },
+      include: { users: true },
+    });
+
+    if (!existingMember) {
+      throw createError(404, "Member not found");
+    }
+
+    // Handle request body
+    const body = { ...req.body };
+
+    // Convert dob to dateOfBirth if it exists
+    if (body.dob) {
+      const dateOfBirth = new Date(body.dob);
+      if (isNaN(dateOfBirth.getTime())) {
+        throw createError(400, "Invalid date format for date of birth");
+      }
+      body.dateOfBirth = dateOfBirth;
+      delete body.dob; // Remove dob as we're using dateOfBirth
+    }
+
+    if (typeof body.businessCategory === "number") {
+      body.businessCategory = body.businessCategory.toString();
+    }
+
+    if (body.chapterId && typeof body.chapterId === "string") {
+      body.chapterId = parseInt(body.chapterId, 10);
+      if (isNaN(body.chapterId)) {
+        throw createError(400, "Invalid Chapter ID format");
+      }
+    }
+
+    // Start transaction to update both member and user
+    const result = await prisma.$transaction(async (tx) => {
+      // Prepare member update data
+      const memberUpdateData = { ...body };
+
+      // Handle file uploads if present
+      if (req.files) {
+        Object.entries(req.files).forEach(([key, files]) => {
+          if (Array.isArray(files) && files.length > 0) {
+            const file = files[0];
+            // Build the complete path using the UUID from the request
+            const uuid = req.fileUUID[key];
+            const fullPath = path.join(
+              "uploads",
+              "members",
+              key,
+              uuid,
+              file.originalname
+            );
+            memberUpdateData[key] = fullPath; // Store the complete path
+          }
+        });
+      }
+
+      // If password is being updated, hash it
+      if (memberUpdateData.password) {
+        memberUpdateData.password = await bcrypt.hash(
+          memberUpdateData.password,
+          10
+        );
+      }
+
+      // Update chapter connection if chapterId is provided
+      if (body.chapterId) {
+        memberUpdateData.chapter = {
+          connect: { id: body.chapterId },
+        };
+        delete memberUpdateData.chapterId;
+      }
+
+      // Update the member record
+      const updatedMember = await tx.member.update({
+        where: { id: parseInt(id) },
+        data: memberUpdateData,
+        include: {
+          chapter: {
+            select: {
+              id: true,
+              name: true,
+              location: {
+                select: {
+                  id: true,
+                  location: true,
+                },
+              },
+              zones: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          users: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              active: true,
+              lastLogin: true,
+            },
+          },
+        },
+      });
+
+      // Update the associated user if email or password changed
+      if (existingMember.users && (body.email || body.password)) {
+        const userUpdateData = {};
+        if (body.email) userUpdateData.email = body.email;
+        if (body.password) {
+          userUpdateData.password = await bcrypt.hash(body.password, 10);
+        }
+
+        await tx.user.update({
+          where: { id: existingMember.users.id },
+          data: userUpdateData,
+        });
+      }
+
+      return updatedMember;
+    });
+
+    // Remove sensitive data before sending response
+    const { password: _, ...sanitizedMember } = result;
+    res.json(sanitizedMember);
+  } catch (error) {
+    // Handle cleanup of uploaded files if the transaction failed
+    if (req.files) {
+      for (const fieldKey of Object.keys(req.files)) {
+        const fileArray = req.files[fieldKey];
+        if (Array.isArray(fileArray)) {
+          for (const file of fileArray) {
+            if (file && file.filename) {
+              try {
+                await fs.unlink(
+                  path.join(
+                    __dirname,
+                    "../../../uploads/members",
+                    file.filename
+                  )
+                );
+              } catch (cleanupError) {
+                console.error(
+                  `Error deleting file ${file.filename} during cleanup:`,
+                  cleanupError
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        // Handle unique constraint violations
+        const field = Array.isArray(error.meta?.target)
+          ? error.meta.target.join(", ")
+          : String(error.meta?.target);
+        throw createError(400, `A record with this ${field} already exists`);
+      }
+    }
+    throw error;
+  }
 });
+
 const deleteMember = asyncHandler(async (req, res) => {
-  /* ... existing code ... */
+  const { id } = req.params;
+
+  if (!id || isNaN(parseInt(id))) {
+    throw createError(400, "Invalid member ID provided");
+  }
+
+  try {
+    // Find the member first to check if they exist and get their file paths
+    const existingMember = await prisma.member.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        users: true,
+        chapter: true,
+      },
+    });
+
+    if (!existingMember) {
+      throw createError(404, "Member not found");
+    }
+
+    // Start transaction to delete both member and associated user
+    const result = await prisma.$transaction(async (tx) => {
+      // First delete the member record
+      const deletedMember = await tx.member.delete({
+        where: { id: parseInt(id) },
+      });
+
+      // If there's an associated user account, delete it
+      if (existingMember.users) {
+        await tx.user.delete({
+          where: { id: existingMember.users.id },
+        });
+      }
+
+      return deletedMember;
+    });
+
+    // After successful database deletion, clean up any uploaded files
+    const profilePictures = [
+      existingMember.profilePicture1,
+      existingMember.profilePicture2,
+      existingMember.profilePicture3,
+    ].filter(Boolean); // Remove null/undefined values
+
+    // Delete the profile pictures if they exist
+    for (const picturePath of profilePictures) {
+      try {
+        await fs.unlink(path.join(__dirname, "../../../", picturePath));
+        console.log(`Deleted file: ${picturePath}`);
+      } catch (error) {
+        // Log error but don't fail the request if file deletion fails
+        console.error(`Error deleting file ${picturePath}:`, error);
+      }
+    }
+
+    res.json({
+      message: "Member deleted successfully",
+      deletedMemberId: id,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Handle specific Prisma errors
+      if (error.code === "P2025") {
+        throw createError(404, "Member not found");
+      }
+      // Handle other potential Prisma errors
+      console.error("Prisma error:", error);
+      throw createError(500, "Database error while deleting member");
+    }
+    throw error;
+  }
 });
+
 const updateProfilePictures = async (req, res) => {
   /* ... existing code ... */
 };
+
 const deleteProfilePicture = async (req, res) => {
   /* ... existing code ... */
 };

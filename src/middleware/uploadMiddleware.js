@@ -29,18 +29,22 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
     destination: (req, file, cb) => {
       // Get the field name (e.g., profilePicture1)
       const fieldName = file.fieldname;
-      // Construct the full path: uploads/members/profilePicture1 etc.
-      const fullPath = path.join(uploadDir, moduleName, fieldName);
+      // Generate a UUID for this upload
+      const uuid = uuidv4();
+      // Store the UUID on the request for later use
+      req.fileUUID = req.fileUUID || {};
+      req.fileUUID[fieldName] = uuid;
+      // Construct the full path: uploads/members/profilePicture1/UUID/
+      const fullPath = path.join(uploadDir, moduleName, fieldName, uuid);
 
       // Create directory if it doesn't exist
       fs.mkdirSync(fullPath, { recursive: true });
       cb(null, fullPath);
     },
     filename: (req, file, cb) => {
-      // Generate a unique filename
-      const uniqueId = uuidv4();
-      const ext = path.extname(file.originalname);
-      cb(null, uniqueId + ext);
+      // Use the original filename
+      const filename = file.originalname;
+      cb(null, filename);
     },
   });
 
