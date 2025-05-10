@@ -318,25 +318,28 @@ model MeetingAttendance {
 }
 
 model Transaction {
-  id              Int      @id @default(autoincrement())
-  chapterId       Int
-  chapter         Chapter  @relation(fields: [chapterId], references: [id])
-  date            DateTime
-  accountType     String   // 'cash' or 'bank'
-  transactionType String   // 'credit' or 'debit'
-  amount          Decimal  @db.Decimal(10, 2)
-  description     String?
-  reference       String?
-  hasInvoice      Boolean  @default(false)
-  gstRate         Decimal? @db.Decimal(5, 2)
-  gstAmount       Decimal? @db.Decimal(10, 2)
-  invoiceNumber   String?
-  partyName       String?
-  partyGSTNo      String?
-  partyAddress    String?
-  invoiceImage    String?  // Path to the uploaded invoice image
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  chapterId         Int
+  chapter           Chapter  @relation(fields: [chapterId], references: [id])
+  date              DateTime
+  accountType       String   // 'cash' or 'bank'
+  transactionType   String   // 'credit' or 'debit'
+  amount            Decimal  @db.Decimal(10, 2)
+  transactionHead   String?
+  narration         String?  @db.Text
+  transactionDetails String?  @db.Text
+  description       String?
+  reference         String?
+  hasInvoice        Boolean  @default(false)
+  gstRate           Decimal? @db.Decimal(5, 2)
+  gstAmount         Decimal? @db.Decimal(10, 2)
+  invoiceNumber     String?
+  partyName         String?
+  partyGSTNo        String?
+  partyAddress      String?
+  invoiceImage      String?  // Path to the uploaded invoice image
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("transactions")
 }

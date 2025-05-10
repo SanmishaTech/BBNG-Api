@@ -187,11 +187,14 @@ const createTransaction = asyncHandler(async (req, res) => {
         invalid_type_error: "Amount must be a number",
       })
       .positive("Amount must be positive"),
+    transactionHead: z.string().optional(),
+    narration: z.string().optional(),
+    transactionDetails: z.string().optional(),
     description: z.string().optional(),
     reference: z.string().optional(),
     hasInvoice: z.boolean().optional().default(false),
-    gstRate: z.number().nonnegative().optional(),
-    gstAmount: z.number().nonnegative().optional(),
+    gstRate: z.number().optional(),
+    gstAmount: z.number().optional(),
     invoiceNumber: z.string().optional(),
     partyName: z.string().optional(),
     partyGSTNo: z.string().optional(),
@@ -217,6 +220,9 @@ const createTransaction = asyncHandler(async (req, res) => {
       accountType: processedData.accountType,
       transactionType: processedData.transactionType,
       amount: processedData.amount,
+      transactionHead: processedData.transactionHead,
+      narration: processedData.narration,
+      transactionDetails: processedData.transactionDetails,
       description: processedData.description,
       reference: processedData.reference,
       hasInvoice: processedData.hasInvoice || false,
@@ -330,15 +336,19 @@ const updateTransaction = asyncHandler(async (req, res) => {
     accountType: z.enum(["cash", "bank"]).optional(),
     transactionType: z.enum(["credit", "debit"]).optional(),
     amount: z.number().positive("Amount must be positive").optional(),
+    transactionHead: z.string().optional(),
+    narration: z.string().optional(),
+    transactionDetails: z.string().optional(),
     description: z.string().optional(),
     reference: z.string().optional(),
     hasInvoice: z.boolean().optional(),
-    gstRate: z.number().nonnegative().optional(),
-    gstAmount: z.number().nonnegative().optional(),
+    gstRate: z.number().optional(),
+    gstAmount: z.number().optional(),
     invoiceNumber: z.string().optional(),
     partyName: z.string().optional(),
     partyGSTNo: z.string().optional(),
-    partyAddress: z.string().optional()
+    partyAddress: z.string().optional(),
+    removeInvoiceImage: z.string().optional(),
   }).refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required"
   });
@@ -371,7 +381,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
     
     let updateData = {};
     
-    // Revert old transaction effect
+    // Revert old transaction 
     if (existingTransaction.accountType === "bank") {
       if (existingTransaction.transactionType === "credit") {
         updateData.bankclosingbalance = new Prisma.Decimal(chapter.bankclosingbalance || 0).sub(new Prisma.Decimal(existingTransaction.amount));
