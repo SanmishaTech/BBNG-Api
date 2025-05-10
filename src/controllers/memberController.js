@@ -457,10 +457,60 @@ const getMembers = asyncHandler(async (req, res) => {
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
-    // Remove sensitive data before sending response
+    // Process members to calculate expiry status and format data
+    const now = new Date();
     const sanitizedMembers = members.map((member) => {
       const { password, ...sanitizedMember } = member;
-      return sanitizedMember;
+      
+      // Check if either HO or venue has expired
+      const hoExpired = member.hoExpiryDate ? member.hoExpiryDate < now : true;
+      const venueExpired = member.venueExpiryDate ? member.venueExpiryDate < now : true;
+      
+      // Determine the earlier expiry date
+      let expiryDate = null;
+      let expiryType = null;
+      
+      if (member.hoExpiryDate && member.venueExpiryDate) {
+        if (member.hoExpiryDate < member.venueExpiryDate) {
+          expiryDate = member.hoExpiryDate;
+          expiryType = 'HO';
+        } else {
+          expiryDate = member.venueExpiryDate;
+          expiryType = 'Venue';
+        }
+      } else if (member.hoExpiryDate) {
+        expiryDate = member.hoExpiryDate;
+        expiryType = 'HO';
+      } else if (member.venueExpiryDate) {
+        expiryDate = member.venueExpiryDate;
+        expiryType = 'Venue';
+      }
+      
+      // Determine if member is active based on expiry dates
+      const isActive = !(hoExpired || venueExpired);
+      
+      // If the member status is active but expiry dates indicate they should be inactive,
+      // update the user's active status in the database (async, don't wait for completion)
+      if (!isActive && member.userId) {
+        prisma.user.update({
+          where: { id: member.userId },
+          data: { active: false }
+        }).catch(err => console.error(`Failed to update user status for member ${member.id}:`, err));
+      }
+      
+      return {
+        ...sanitizedMember,
+        isActive,
+        // Only include expiry information if the member is active
+        ...(isActive ? {
+          expiryDate,
+          expiryType,
+          daysUntilExpiry: expiryDate ? Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)) : null
+        } : {
+          // For expired members, just show that they're expired
+          isExpired: true
+        })
+      };
     });
 
     res.json({
@@ -537,8 +587,59 @@ const getMemberById = asyncHandler(async (req, res) => {
 
     // Remove sensitive data before sending response
     const { password, ...sanitizedMember } = member;
+    
+    // Calculate expiry status
+    const now = new Date();
+    const hoExpired = member.hoExpiryDate ? member.hoExpiryDate < now : true;
+    const venueExpired = member.venueExpiryDate ? member.venueExpiryDate < now : true;
+    
+    // Determine the earlier expiry date
+    let expiryDate = null;
+    let expiryType = null;
+    
+    if (member.hoExpiryDate && member.venueExpiryDate) {
+      if (member.hoExpiryDate < member.venueExpiryDate) {
+        expiryDate = member.hoExpiryDate;
+        expiryType = 'HO';
+      } else {
+        expiryDate = member.venueExpiryDate;
+        expiryType = 'Venue';
+      }
+    } else if (member.hoExpiryDate) {
+      expiryDate = member.hoExpiryDate;
+      expiryType = 'HO';
+    } else if (member.venueExpiryDate) {
+      expiryDate = member.venueExpiryDate;
+      expiryType = 'Venue';
+    }
+    
+    // Determine if member is active based on expiry dates
+    const isActive = !(hoExpired || venueExpired);
+    
+    // If not active due to expiry, update user record
+    if (!isActive && member.userId) {
+      prisma.user.update({
+        where: { id: member.userId },
+        data: { active: false }
+      }).catch(err => console.error(`Failed to update user status for member ${member.id}:`, err));
+    }
+    
+    // Add expiry information to the response
+    const memberWithExpiry = {
+      ...sanitizedMember,
+      isActive,
+      // Only include expiry information if the member is active
+      ...(isActive ? {
+        expiryDate,
+        expiryType,
+        daysUntilExpiry: expiryDate ? Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)) : null
+      } : {
+        // For expired members, just show that they're expired
+        isExpired: true
+      })
+    };
 
-    res.json(sanitizedMember);
+    res.json(memberWithExpiry);
   } catch (error) {
     console.error("Error fetching member:", error);
     if (error.status === 404) {
@@ -814,6 +915,168 @@ const getProfilePicture = asyncHandler(async (req, res) => {
   /* ... existing code ... */
 });
 
+/**
+ * PATCH /api/members/:id/user-status
+ * Toggle only the user's active status without affecting membership expiry
+ */
+const toggleUserStatus = asyncHandler(async (req, res) => {
+  const memberId = parseInt(req.params.id);
+  
+  try {
+    // Find the member to get the associated user
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: {
+        userId: true,
+        users: {
+          select: {
+            id: true,
+            active: true
+          }
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(404).json({
+        errors: { message: "Member not found" }
+      });
+    }
+
+    if (!member.userId || !member.users) {
+      return res.status(400).json({
+        errors: { message: "This member has no associated user account" }
+      });
+    }
+
+    // Update only the user's active status
+    const updatedUser = await prisma.user.update({
+      where: { id: member.userId },
+      data: { active: !member.users.active }
+    });
+
+    res.json({
+      message: `User has been set to ${updatedUser.active ? 'active' : 'inactive'}`,
+      active: updatedUser.active
+    });
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    throw createError(500, 'Error updating user status');
+  }
+});
+
+/**
+ * GET /api/members/:id/membership-status
+ * Check the membership status of a member based on expiry dates
+ */
+const getMembershipStatus = asyncHandler(async (req, res) => {
+  const memberId = parseInt(req.params.id);
+  
+  try {
+    // Get the member with expiry dates
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: {
+        id: true,
+        memberName: true,
+        hoExpiryDate: true,
+        venueExpiryDate: true,
+        userId: true,
+        users: {
+          select: {
+            id: true,
+            active: true
+          }
+        },
+        memberships: {
+          where: {
+            active: true,
+            packageEndDate: {
+              gte: new Date()
+            }
+          },
+          select: {
+            id: true,
+            packageStartDate: true,
+            packageEndDate: true,
+            package: {
+              select: {
+                id: true,
+                packageName: true,
+                isVenueFee: true
+              }
+            }
+          },
+          orderBy: {
+            packageEndDate: 'desc'
+          }
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(404).json({
+        errors: { message: "Member not found" }
+      });
+    }
+
+    const now = new Date();
+    const hoExpired = member.hoExpiryDate ? member.hoExpiryDate < now : true;
+    const venueExpired = member.venueExpiryDate ? member.venueExpiryDate < now : true;
+    
+    // Determine the earlier expiry date for display
+    let earlierExpiryDate = null;
+    let expiryType = null;
+    
+    if (member.hoExpiryDate && member.venueExpiryDate) {
+      if (member.hoExpiryDate < member.venueExpiryDate) {
+        earlierExpiryDate = member.hoExpiryDate;
+        expiryType = 'HO';
+      } else {
+        earlierExpiryDate = member.venueExpiryDate;
+        expiryType = 'Venue';
+      }
+    } else if (member.hoExpiryDate) {
+      earlierExpiryDate = member.hoExpiryDate;
+      expiryType = 'HO';
+    } else if (member.venueExpiryDate) {
+      earlierExpiryDate = member.venueExpiryDate;
+      expiryType = 'Venue';
+    }
+
+    // Active only if both are not expired
+    const isActive = !(hoExpired || venueExpired);
+    
+    // If member is inactive due to expiry, update the user's active status
+    if (!isActive && member.userId) {
+      await prisma.user.update({
+        where: { id: member.userId },
+        data: { active: false }
+      });
+    }
+
+    // Prepare response
+    const response = {
+      id: member.id,
+      memberName: member.memberName,
+      active: isActive,
+      hasActiveMemberships: member.memberships.length > 0,
+      hoExpiryDate: member.hoExpiryDate,
+      venueExpiryDate: member.venueExpiryDate,
+      hoExpired,
+      venueExpired,
+      earlierExpiryDate,
+      expiryType,
+      memberships: member.memberships
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error checking membership status:', error);
+    throw createError(500, 'Error checking membership status');
+  }
+});
+
 module.exports = {
   getMembers, // Make sure this is defined or imported
   createMember,
@@ -823,4 +1086,6 @@ module.exports = {
   updateProfilePictures, // Make sure this is defined or imported
   deleteProfilePicture, // Make sure this is defined or imported
   getProfilePicture, // Make sure this is defined or imported
+  getMembershipStatus, // New function to check membership status
+  toggleUserStatus // Function to toggle user's active status only
 };

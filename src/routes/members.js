@@ -516,4 +516,86 @@ router.get(
   memberController.getProfilePicture
 );
 
+/**
+ * @swagger
+ * /api/members/{id}/membership-status:
+ *   get:
+ *     summary: Get membership status including expiry information
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Returns membership status information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 memberName:
+ *                   type: string
+ *                 active:
+ *                   type: boolean
+ *                 hasActiveMemberships:
+ *                   type: boolean
+ *                 hoExpiryDate:
+ *                   type: string
+ *                   format: date-time
+ *                 venueExpiryDate:
+ *                   type: string
+ *                   format: date-time
+ *                 hoExpired:
+ *                   type: boolean
+ *                 venueExpired:
+ *                   type: boolean
+ *                 earlierExpiryDate:
+ *                   type: string
+ *                   format: date-time
+ *                 expiryType:
+ *                   type: string
+ *                   enum: [HO, Venue]
+ *       404:
+ *         description: Member not found
+ */
+router.get("/:id/membership-status", auth, memberController.getMembershipStatus);
+
+/**
+ * @swagger
+ * /api/members/{id}/user-status:
+ *   patch:
+ *     summary: Toggle only the user's active status without affecting membership expiry
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 active:
+ *                   type: boolean
+ *       404:
+ *         description: Member not found
+ */
+router.patch("/:id/user-status", auth, memberController.toggleUserStatus);
+
 module.exports = router;

@@ -225,6 +225,8 @@ const createMembership = asyncHandler(async (req, res) => {
     totalFees,
   };
 
+ 
+
   // Create membership record
   const membership = await prisma.membership.create({
     data: membershipData,
