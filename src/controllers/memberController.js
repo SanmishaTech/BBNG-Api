@@ -501,6 +501,12 @@ const getMemberById = asyncHandler(async (req, res) => {
               select: {
                 id: true,
                 location: true,
+                zone: {
+                  select: {
+                    id: true,
+                    name: true,
+                  }
+                }
               },
             },
             zones: {
@@ -511,6 +517,7 @@ const getMemberById = asyncHandler(async (req, res) => {
             },
           },
         },
+        // Remove the invalid location references
         users: {
           select: {
             id: true,

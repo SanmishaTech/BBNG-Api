@@ -15,6 +15,8 @@ const siteRoutes = require("./routes/site");
 const messageRoutes = require("./routes/messages");
 const chapterRoutes = require("./routes/chapters");
 const memberRoutes = require("./routes/members");
+const packageRoutes = require("./routes/packages");
+const membershipRoutes = require("./routes/memberships");
 
 const swaggerRouter = require("./swagger");
 
@@ -50,6 +52,8 @@ app.use("/sites", siteRoutes); // Ensure this line is included to handle site ro
 app.use("/messages", messageRoutes); // Add this line to include message routes
 app.use("/chapters", chapterRoutes);
 app.use("/api/members", memberRoutes);
+app.use("/packages", packageRoutes); // Add routes for packages
+app.use("/memberships", membershipRoutes); // Add routes for memberships
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
