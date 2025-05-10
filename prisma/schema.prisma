@@ -111,6 +111,8 @@ model Chapter {
 
   members Member[]
   packages Package[] // Added relation to Package model
+  meetings ChapterMeeting[] // Relation to ChapterMeeting model
+  visitors Visitor[] @relation("VisitorHomeChapter") // Relation to Visitor model
   transactions Transaction[] // Added relation to Transaction model
 
   @@map("chapters")
@@ -161,6 +163,9 @@ model Member {
   userId   Int?    @unique // Foreign key to User model
 
   memberships Membership[] // Relation to memberships
+  
+  invitedVisitors Visitor[] // Visitors invited by this member
+  meetingAttendances MeetingAttendance[] // Attendance records for this member
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -232,6 +237,84 @@ model Membership {
   updatedAt       DateTime @updatedAt
 
   @@map("memberships")
+}
+
+model ChapterMeeting {
+  id           Int      @id @default(autoincrement())
+  date         DateTime
+  meetingTime  String
+  meetingTitle String
+  meetingVenue String
+  
+  chapter      Chapter  @relation(fields: [chapterId], references: [id])
+  chapterId    Int
+  
+  visitors     Visitor[]
+  attendances  MeetingAttendance[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("chapter_meetings")
+}
+
+model Visitor {
+  id                Int       @id @default(autoincrement())
+  // Basic Details
+  name              String
+  email             String?
+  gender            String
+  dateOfBirth       DateTime?
+  mobile1           String
+  mobile2           String?
+  isCrossChapter    Boolean   @default(false)
+  
+  // Chapter & Meeting Information
+  meeting           ChapterMeeting  @relation(fields: [meetingId], references: [id])
+  meetingId         Int
+  
+  homeChapter       Chapter?  @relation(name: "VisitorHomeChapter", fields: [chapterId], references: [id])
+  chapterId         Int?      // Home chapter for cross-chapter visitors
+  chapter           String    // Chapter name for non-members
+  
+  invitedById       Int?
+  invitedByMember   Member?   @relation(fields: [invitedById], references: [id])
+  
+  // Business Details
+  category          String?
+  businessDetails   String?   @db.Text
+  
+  // Address Details
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  pincode           String?
+  
+  // Status
+  status            String?    // e.g., "Invited", "Confirmed", "Attended", "No-Show"
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("visitors")
+}
+
+model MeetingAttendance {
+  id               Int           @id @default(autoincrement())
+  
+  meeting          ChapterMeeting @relation(fields: [meetingId], references: [id])
+  meetingId        Int
+  
+  member           Member        @relation(fields: [memberId], references: [id])
+  memberId         Int
+  
+  isPresent        Boolean       @default(false)
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([meetingId, memberId])
+  @@map("meeting_attendances")
 }
 
 model Transaction {
