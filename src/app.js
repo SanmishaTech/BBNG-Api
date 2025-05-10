@@ -14,9 +14,12 @@ const trainingRoutes = require("./routes/training");
 const siteRoutes = require("./routes/site");
 const messageRoutes = require("./routes/messages");
 const chapterRoutes = require("./routes/chapters");
+const chapterMeetingRoutes = require("./routes/chapterMeetings");
 const memberRoutes = require("./routes/members");
 const packageRoutes = require("./routes/packages");
 const membershipRoutes = require("./routes/memberships");
+const visitorRoutes = require("./routes/visitorRoutes");
+const meetingAttendanceRoutes = require("./routes/meetingAttendanceRoutes");
 
 const swaggerRouter = require("./swagger");
 
@@ -51,9 +54,12 @@ app.use("/categories", categoryRoutes);
 app.use("/sites", siteRoutes); // Ensure this line is included to handle site routes
 app.use("/messages", messageRoutes); // Add this line to include message routes
 app.use("/chapters", chapterRoutes);
+app.use("/chapter-meetings", chapterMeetingRoutes); // Add routes for chapter meetings
 app.use("/api/members", memberRoutes);
 app.use("/packages", packageRoutes); // Add routes for packages
 app.use("/memberships", membershipRoutes); // Add routes for memberships
+app.use("/visitors", visitorRoutes); // Add routes for visitors
+app.use("/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
