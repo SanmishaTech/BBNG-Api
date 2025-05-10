@@ -102,7 +102,10 @@ model Chapter {
   meetingday         String
   status             Boolean  @default(false)
   venue              String
- 
+  bankopeningbalance Decimal? @db.Decimal(10, 2)
+  bankclosingbalance Decimal? @db.Decimal(10, 2)
+  cashopeningbalance Decimal? @db.Decimal(10, 2)
+  cashclosingbalance Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -49,7 +49,8 @@ const getPackages = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const { search = "", isVenueFee, active } = req.query;
-  const parsedIsVenueFee = isVenueFee != null ? isVenueFee === "true" : undefined;
+  const parsedIsVenueFee =
+    isVenueFee != null ? isVenueFee === "true" : undefined;
   const parsedActive = active != null ? active === "true" : undefined;
   const sortBy = req.query.sortBy || "packageName";
   const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
@@ -62,13 +63,14 @@ const getPackages = asyncHandler(async (req, res) => {
       },
     });
   }
-  if (parsedIsVenueFee !== undefined) filters.push({ isVenueFee: parsedIsVenueFee });
+  if (parsedIsVenueFee !== undefined)
+    filters.push({ isVenueFee: parsedIsVenueFee });
   if (parsedActive !== undefined) filters.push({ active: parsedActive });
-  
+
   const where = filters.length ? { AND: filters } : {};
 
   const [packages, total] = await Promise.all([
-    prisma.package.findMany({
+    prisma?.package?.findMany({
       where,
       skip,
       take: limit,
@@ -190,7 +192,7 @@ const updatePackage = asyncHandler(async (req, res) => {
       const existingPackage = await prisma.package.findUnique({
         where: { id },
       });
-      
+
       if (!existingPackage) {
         ctx.addIssue({
           message: "Package not found",
@@ -198,16 +200,18 @@ const updatePackage = asyncHandler(async (req, res) => {
         });
         return;
       }
-      
+
       // Check if isVenueFee is being updated to true but no chapterId provided
-      const isVenueFee = data.isVenueFee !== undefined 
-        ? data.isVenueFee 
-        : existingPackage.isVenueFee;
-        
-      const chapterId = data.chapterId !== undefined 
-        ? data.chapterId 
-        : existingPackage.chapterId;
-        
+      const isVenueFee =
+        data.isVenueFee !== undefined
+          ? data.isVenueFee
+          : existingPackage.isVenueFee;
+
+      const chapterId =
+        data.chapterId !== undefined
+          ? data.chapterId
+          : existingPackage.chapterId;
+
       if (isVenueFee === true && !chapterId) {
         ctx.addIssue({
           path: ["chapterId"],
@@ -238,26 +242,28 @@ const updatePackage = asyncHandler(async (req, res) => {
   const existingPackage = await prisma.package.findUnique({
     where: { id },
   });
-  
+
   if (!existingPackage) {
     throw createError(404, "Package not found");
   }
 
   // Calculate new GST amount and total fees if needed
   let packageData = { ...req.body };
-  
+
   if (req.body.basicFees !== undefined || req.body.gstRate !== undefined) {
-    const basicFees = req.body.basicFees !== undefined 
-      ? parseFloat(req.body.basicFees) 
-      : parseFloat(existingPackage.basicFees);
-      
-    const gstRate = req.body.gstRate !== undefined 
-      ? parseFloat(req.body.gstRate) 
-      : parseFloat(existingPackage.gstRate);
-      
+    const basicFees =
+      req.body.basicFees !== undefined
+        ? parseFloat(req.body.basicFees)
+        : parseFloat(existingPackage.basicFees);
+
+    const gstRate =
+      req.body.gstRate !== undefined
+        ? parseFloat(req.body.gstRate)
+        : parseFloat(existingPackage.gstRate);
+
     const gstAmount = (basicFees * gstRate) / 100;
     const totalFees = basicFees + gstAmount;
-    
+
     packageData = {
       ...packageData,
       gstAmount,
@@ -283,20 +289,21 @@ const deletePackage = asyncHandler(async (req, res) => {
   // Check if package exists
   const existing = await prisma.package.findUnique({ where: { id } });
   if (!existing) throw createError(404, "Package not found");
-  
+
   // Check if package is used in any memberships
   const membershipExists = await prisma.membership.findFirst({
     where: { packageId: id },
   });
-  
+
   if (membershipExists) {
     // If package is in use, set it to inactive instead of deleting
     await prisma.package.update({
       where: { id },
       data: { active: false },
     });
-    return res.json({ 
-      message: "Package has existing memberships. It has been deactivated instead of deleted." 
+    return res.json({
+      message:
+        "Package has existing memberships. It has been deactivated instead of deleted.",
     });
   }
 
@@ -311,4 +318,4 @@ module.exports = {
   getPackageById,
   updatePackage,
   deletePackage,
-}; 
+};
