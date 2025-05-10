@@ -17,6 +17,7 @@ const chapterRoutes = require("./routes/chapters");
 const memberRoutes = require("./routes/members");
 const packageRoutes = require("./routes/packages");
 const membershipRoutes = require("./routes/memberships");
+const transactionRoutes = require("./routes/transactionRoutes");
 
 const swaggerRouter = require("./swagger");
 
@@ -54,6 +55,7 @@ app.use("/chapters", chapterRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/packages", packageRoutes); // Add routes for packages
 app.use("/memberships", membershipRoutes); // Add routes for memberships
+app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
