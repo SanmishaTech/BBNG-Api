@@ -111,6 +111,10 @@ const createChapter = asyncHandler(async (req, res) => {
       meetingday: z.string().min(1, "Meeting day is required").max(50),
       status: z.boolean().optional(),
       venue: z.string().min(1, "Venue is required").max(255),
+      bankopeningbalance: z.number().nullable(),
+      bankclosingbalance: z.number().nullable(),
+      cashopeningbalance: z.number().nullable(),
+      cashclosingbalance: z.number().nullable(),
     })
     .superRefine(async (data, ctx) => {
       const exists = await prisma.chapter.findFirst({
@@ -169,6 +173,10 @@ const updateChapter = asyncHandler(async (req, res) => {
       meetingday: z.string().min(1).max(50).optional(),
       status: z.boolean().optional(),
       venue: z.string().min(1).max(255).optional(),
+      bankopeningbalance: z.number().nullable().optional(),
+      bankclosingbalance: z.number().nullable().optional(),
+      cashopeningbalance: z.number().nullable().optional(),
+      cashclosingbalance: z.number().nullable().optional(),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: "At least one field is required",
