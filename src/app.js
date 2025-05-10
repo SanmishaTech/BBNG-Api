@@ -20,6 +20,7 @@ const packageRoutes = require("./routes/packages");
 const membershipRoutes = require("./routes/memberships");
 const visitorRoutes = require("./routes/visitorRoutes");
 const meetingAttendanceRoutes = require("./routes/meetingAttendanceRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 
 const swaggerRouter = require("./swagger");
 
@@ -60,6 +61,7 @@ app.use("/packages", packageRoutes); // Add routes for packages
 app.use("/memberships", membershipRoutes); // Add routes for memberships
 app.use("/visitors", visitorRoutes); // Add routes for visitors
 app.use("/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
+app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {

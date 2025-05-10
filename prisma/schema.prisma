@@ -113,6 +113,7 @@ model Chapter {
   packages Package[] // Added relation to Package model
   meetings ChapterMeeting[] // Relation to ChapterMeeting model
   visitors Visitor[] @relation("VisitorHomeChapter") // Relation to Visitor model
+  transactions Transaction[] // Added relation to Transaction model
 
   @@map("chapters")
 }
@@ -314,4 +315,31 @@ model MeetingAttendance {
 
   @@unique([meetingId, memberId])
   @@map("meeting_attendances")
+}
+
+model Transaction {
+  id                Int      @id @default(autoincrement())
+  chapterId         Int
+  chapter           Chapter  @relation(fields: [chapterId], references: [id])
+  date              DateTime
+  accountType       String   // 'cash' or 'bank'
+  transactionType   String   // 'credit' or 'debit'
+  amount            Decimal  @db.Decimal(10, 2)
+  transactionHead   String?
+  narration         String?  @db.Text
+  transactionDetails String?  @db.Text
+  description       String?
+  reference         String?
+  hasInvoice        Boolean  @default(false)
+  gstRate           Decimal? @db.Decimal(5, 2)
+  gstAmount         Decimal? @db.Decimal(10, 2)
+  invoiceNumber     String?
+  partyName         String?
+  partyGSTNo        String?
+  partyAddress      String?
+  invoiceImage      String?  // Path to the uploaded invoice image
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("transactions")
 }
