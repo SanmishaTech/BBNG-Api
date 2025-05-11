@@ -36,17 +36,48 @@ const exportMembers = async (req, res, next) => {
         whereClause.createdAt.lte = endDate;
       }
     }
+    
+    // For non-super-admin users, filter by chapter
+    // Super-admin can see all members
+    if (req.user.role !== "super_admin") {
+      // First, find the user with its associated member to get the chapter
+      const userWithMember = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: { member: true }
+      });
+      
+      // If user has an associated member with a chapter, filter by that chapter
+      if (userWithMember?.member?.chapterId) {
+        whereClause.chapterId = userWithMember.member.chapterId;
+      } else {
+        // If no associated chapter found, return empty result
+        return res.status(400).json({
+          errors: { message: "No associated chapter found for this user" },
+        });
+      }
+    }
 
-    // Fetch members with required fields and date filtering
+    // Fetch members with required fields, date filtering and chapter filtering
     const members = await prisma.member.findMany({
       where: whereClause,
       select: {
         id: true,
         memberName: true,
+        email: true,
         category: true,
         gender: true,
         dateOfBirth: true,
         createdAt: true,
+        chapter: {
+          select: {
+            name: true
+          }
+        },
+        users: {
+          select: {
+            email: true
+          }
+        }
       },
       orderBy: { id: "asc" },
     });
@@ -58,6 +89,8 @@ const exportMembers = async (req, res, next) => {
     worksheet.columns = [
       { header: "ID", key: "id", width: 10 },
       { header: "Name", key: "memberName", width: 30 },
+      { header: "Email", key: "email", width: 35 },
+      { header: "Chapter", key: "chapterName", width: 20 },
       { header: "Category", key: "category", width: 20 },
       { header: "Gender", key: "gender", width: 10 },
       { header: "Date of Birth", key: "dateOfBirth", width: 15 },
@@ -77,6 +110,8 @@ const exportMembers = async (req, res, next) => {
       worksheet.addRow({
         id: m.id,
         memberName: m.memberName,
+        email: m.users?.email || m.email || "N/A",
+        chapterName: m.chapter?.name || "N/A",
         category: m.category,
         gender: m.gender,
         dateOfBirth: m.dateOfBirth ? formatDate(m.dateOfBirth) : "N/A",
