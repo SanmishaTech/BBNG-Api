@@ -163,7 +163,7 @@ model Member {
   userId   Int?    @unique // Foreign key to User model
 
   memberships Membership[] // Relation to memberships
-  
+  requirements Requirement[] // Relation to requirements
   invitedVisitors Visitor[] // Visitors invited by this member
   meetingAttendances MeetingAttendance[] // Attendance records for this member
 
@@ -342,4 +342,17 @@ model Transaction {
   updatedAt         DateTime @updatedAt
 
   @@map("transactions")
+}
+ 
+
+model Requirement {
+  id          Int      @id @default(autoincrement())
+  member      Member   @relation(fields: [memberId], references: [id])
+  memberId    Int
+  heading     String
+  requirement String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("requirements")
 }
