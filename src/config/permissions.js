@@ -6,6 +6,7 @@ module.exports = {
   "users.delete": ["super_admin"],
   "users.export": ["super_admin"],
   "members.export": ["super_admin", "admin", "member", "user"],
+  "transactions.export": ["super_admin", "admin", "member", "user"],
   //agencies
   "agencies.read": ["super_admin"],
   "agencies.write": ["super_admin"],
