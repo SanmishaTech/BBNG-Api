@@ -22,6 +22,7 @@ const visitorRoutes = require("./routes/visitorRoutes");
 const meetingAttendanceRoutes = require("./routes/meetingAttendanceRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const requirementRoutes = require("./routes/requirements");
+const memberReportRoutes = require("./routes/memberReports");
 const swaggerRouter = require("./swagger");
 
 const path = require("path");
@@ -63,6 +64,7 @@ app.use("/visitors", visitorRoutes); // Add routes for visitors
 app.use("/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
 app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
 app.use("/requirements", requirementRoutes); // Add routes for requirements
+app.use("/memberreports", memberReportRoutes); // Add route for member export reports
 app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
