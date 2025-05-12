@@ -67,51 +67,57 @@ const listReferences = asyncHandler(async (req, res, next) => {
     const where = {};
     if (giverId) {
       where.giverId = int(giverId);
-      
+
       // Handle self-reference filtering when a giverId is specified
-      if (self === 'false' || self === false) {
+      if (self === "false" || self === false) {
         where.NOT = {
-          receiverId: int(giverId) // Don't include references where receiver is same as giver
+          receiverId: int(giverId), // Don't include references where receiver is same as giver
         };
-      } else if (self === 'true' || self === true) {
+      } else if (self === "true" || self === true) {
         where.receiverId = int(giverId); // Only include references where receiver is same as giver
       }
     }
-    
+
     if (receiverId) where.receiverId = int(receiverId);
     if (status) where.status = status;
-    
+
     if (search) {
       where.OR = [
         { nameOfReferral: { contains: search, mode: "insensitive" } },
-        { email:          { contains: search, mode: "insensitive" } },
-        { remarks:        { contains: search, mode: "insensitive" } },
-        { mobile1:        { contains: search } },
+        { email: { contains: search, mode: "insensitive" } },
+        { remarks: { contains: search, mode: "insensitive" } },
+        { mobile1: { contains: search } },
       ];
     }
 
-    const skip  = (int(page) - 1) * int(limit);
+    const skip = (int(page) - 1) * int(limit);
     const total = await prisma.reference.count({ where });
 
-    const rows  = await prisma.reference.findMany({
+    const rows = await prisma.reference.findMany({
       where,
-      skip:  exportData ? undefined : skip,
-      take:  exportData ? undefined : int(limit),
+      skip: exportData ? undefined : skip,
+      take: exportData ? undefined : int(limit),
       orderBy: { [sortBy]: sortOrder },
       include: {
-        giver:    { select: { id:true, memberName:true, email:true } },
-        receiver: { select: { id:true, memberName:true, email:true } },
-        chapter:  { select: { id:true, name:true } },
+        giver: { select: { id: true, memberName: true, email: true } },
+        receiver: { select: { id: true, memberName: true, email: true } },
+        chapter: { select: { id: true, name: true } },
       },
     });
 
-    const payload = exportData === 'true'
-      ? { references: rows }
-      : { references: rows, page: int(page), totalPages: Math.ceil(total/int(limit)), total };
+    const payload =
+      exportData === "true"
+        ? { references: rows }
+        : {
+            references: rows,
+            page: int(page),
+            totalPages: Math.ceil(total / int(limit)),
+            total,
+          };
 
     res.json(payload);
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -149,7 +155,7 @@ const getReferenceById = asyncHandler(async (req, res, next) => {
         },
         statusHistory: {
           orderBy: {
-            date: 'desc',
+            date: "desc",
           },
         },
       },
@@ -160,8 +166,8 @@ const getReferenceById = asyncHandler(async (req, res, next) => {
     }
 
     res.json(reference);
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -181,32 +187,46 @@ const createReference = asyncHandler(async (req, res, next) => {
       nameOfReferral: z.string().nonempty("Name of referral is required."),
       mobile1: z.string().nonempty("Primary mobile number is required."),
       mobile2: z.string().optional(),
-      email: z.string().email("Must be a valid email address.").optional().nullable(),
+      email: z
+        .string()
+        .email("Must be a valid email address.")
+        .optional()
+        .nullable(),
       remarks: z.string().optional(),
       addressLine1: z.string().optional(),
       location: z.string().optional(),
       addressLine2: z.string().optional(),
       pincode: z.string().optional(),
-      status: z.string().optional()
+      status: z.string().optional(),
     });
 
     // Use validateRequest utility for validation
-    const validatedData = await validateRequest(schema, req.body,res,next);
+    const validatedData = await validateRequest(schema, req.body, res, next);
+    if (validatedData.errors) {
+      return res.status(400).json({ errors: validatedData.errors });
+    }
 
     // Check if the current user has a corresponding member record
     const member = await prisma.member.findFirst({
-      where: { userId: req.user.id }
+      where: { userId: req.user.id },
     });
 
     if (!member) {
-      return next(createError(400, "Current user does not have a corresponding member record. Cannot create reference."));
+      return next(
+        createError(
+          400,
+          "Current user does not have a corresponding member record. Cannot create reference."
+        )
+      );
     }
 
     // Create the reference
     const reference = await prisma.reference.create({
       data: {
         date: new Date(validatedData.date),
-        noOfReferences: validatedData.noOfReferences ? int(validatedData.noOfReferences) : null,
+        noOfReferences: validatedData.noOfReferences
+          ? int(validatedData.noOfReferences)
+          : null,
         chapterId: int(validatedData.chapterId),
         giverId: member.id, // Use the member ID, not the user ID
         receiverId: int(validatedData.memberId), // memberId in request is receiverId
@@ -226,8 +246,8 @@ const createReference = asyncHandler(async (req, res, next) => {
     });
 
     res.status(201).json(reference);
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -237,11 +257,11 @@ const createReference = asyncHandler(async (req, res, next) => {
 const updateReference = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     if (!id || isNaN(parseInt(id))) {
       return next(createError(400, "Invalid reference ID"));
     }
-    
+
     // Define Zod schema for reference update validation
     const schema = z.object({
       date: z.string().optional(),
@@ -253,50 +273,68 @@ const updateReference = asyncHandler(async (req, res, next) => {
       nameOfReferral: z.string().optional(),
       mobile1: z.string().optional(),
       mobile2: z.string().optional(),
-      email: z.string().email("Must be a valid email address.").optional().nullable(),
+      email: z
+        .string()
+        .email("Must be a valid email address.")
+        .optional()
+        .nullable(),
       remarks: z.string().optional(),
       addressLine1: z.string().optional(),
       addressLine2: z.string().optional(),
       location: z.string().optional(),
       pincode: z.string().optional(),
-      status: z.string().optional()
+      status: z.string().optional(),
     });
 
     // Use validateRequest utility for validation
     const validatedData = await validateRequest(schema, req.body);
-    
+
     // Prepare data for update, only including fields that are provided
     const updateData = {};
-    
+
     if (validatedData.date) updateData.date = new Date(validatedData.date);
     if (validatedData.noOfReferences !== undefined) {
-      updateData.noOfReferences = validatedData.noOfReferences ? int(validatedData.noOfReferences) : null;
+      updateData.noOfReferences = validatedData.noOfReferences
+        ? int(validatedData.noOfReferences)
+        : null;
     }
-    if (validatedData.chapterId) updateData.chapterId = int(validatedData.chapterId);
-    if (validatedData.memberId) updateData.receiverId = int(validatedData.memberId); // memberId in request maps to receiverId
-    if (validatedData.urgency !== undefined) updateData.urgency = validatedData.urgency;
+    if (validatedData.chapterId)
+      updateData.chapterId = int(validatedData.chapterId);
+    if (validatedData.memberId)
+      updateData.receiverId = int(validatedData.memberId); // memberId in request maps to receiverId
+    if (validatedData.urgency !== undefined)
+      updateData.urgency = validatedData.urgency;
     if (validatedData.self !== undefined) {
-      updateData.self = validatedData.self === true || validatedData.self === "true";
+      updateData.self =
+        validatedData.self === true || validatedData.self === "true";
     }
-    if (validatedData.nameOfReferral) updateData.nameOfReferral = validatedData.nameOfReferral;
+    if (validatedData.nameOfReferral)
+      updateData.nameOfReferral = validatedData.nameOfReferral;
     if (validatedData.mobile1) updateData.mobile1 = validatedData.mobile1;
-    if (validatedData.mobile2 !== undefined) updateData.mobile2 = validatedData.mobile2;
-    if (validatedData.email !== undefined) updateData.email = validatedData.email;
-    if (validatedData.remarks !== undefined) updateData.remarks = validatedData.remarks;
-    if (validatedData.addressLine1 !== undefined) updateData.addressLine1 = validatedData.addressLine1;
-    if (validatedData.location !== undefined) updateData.location = validatedData.location;
-    if (validatedData.addressLine2 !== undefined) updateData.addressLine2 = validatedData.addressLine2;
-    if (validatedData.pincode !== undefined) updateData.pincode = validatedData.pincode;
+    if (validatedData.mobile2 !== undefined)
+      updateData.mobile2 = validatedData.mobile2;
+    if (validatedData.email !== undefined)
+      updateData.email = validatedData.email;
+    if (validatedData.remarks !== undefined)
+      updateData.remarks = validatedData.remarks;
+    if (validatedData.addressLine1 !== undefined)
+      updateData.addressLine1 = validatedData.addressLine1;
+    if (validatedData.location !== undefined)
+      updateData.location = validatedData.location;
+    if (validatedData.addressLine2 !== undefined)
+      updateData.addressLine2 = validatedData.addressLine2;
+    if (validatedData.pincode !== undefined)
+      updateData.pincode = validatedData.pincode;
     if (validatedData.status) updateData.status = validatedData.status;
 
     const updated = await prisma.reference.update({
       where: { id: int(id) },
-      data: updateData
+      data: updateData,
     });
 
     res.json(updated);
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -322,8 +360,8 @@ const deleteReference = asyncHandler(async (req, res, next) => {
     });
 
     res.json({ success: true, message: "Reference deleted successfully" });
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -333,23 +371,26 @@ const deleteReference = asyncHandler(async (req, res, next) => {
 const updateReferenceStatus = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     if (!id || isNaN(parseInt(id))) {
       return next(createError(400, "Invalid reference ID"));
     }
-    
+
     // Define Zod schema for status update validation
     const schema = z.object({
       status: z.enum(["pending", "contacted", "converted", "rejected"], {
-        errorMap: () => ({ message: "Status must be one of: pending, contacted, converted, rejected" })
+        errorMap: () => ({
+          message:
+            "Status must be one of: pending, contacted, converted, rejected",
+        }),
       }),
       date: z.string().optional(),
-      comment: z.string().optional()
+      comment: z.string().optional(),
     });
 
     // Use validateRequest utility for validation
     const validatedData = await validateRequest(schema, req.body);
-    
+
     // Check if reference exists
     const existingReference = await prisma.reference.findUnique({
       where: { id: int(id) },
@@ -364,12 +405,12 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
       // Update the reference status
       const updatedReference = await prisma.reference.update({
         where: { id: int(id) },
-        data: { 
+        data: {
           status: validatedData.status,
           // You could add more fields here if needed
-        }
+        },
       });
-      
+
       // Create a status history entry
       const statusHistory = await prisma.referenceStatusHistory.create({
         data: {
@@ -377,16 +418,16 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
           date: validatedData.date ? new Date(validatedData.date) : new Date(),
           status: validatedData.status,
           comment: validatedData.comment || null,
-          userId: req.user.id // Record which user made the status change
-        }
+          userId: req.user.id, // Record which user made the status change
+        },
       });
-      
+
       return { reference: updatedReference, statusHistory };
     });
 
     res.json(result);
-  } catch (err) { 
-    next(err); 
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -396,17 +437,19 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
 const getGivenReferences = asyncHandler(async (req, res, next) => {
   try {
     let { memberId } = req.params;
-    
+
     if (!memberId && req.user) {
       // If no member ID is provided, use the current user's member ID
       const member = await prisma.member.findFirst({
-        where: { userId: req.user.id }
+        where: { userId: req.user.id },
       });
-      
+
       if (!member) {
-        return next(createError(400, "No member profile found for current user"));
+        return next(
+          createError(400, "No member profile found for current user")
+        );
       }
-      
+
       memberId = member.id;
     }
 
@@ -424,17 +467,19 @@ const getGivenReferences = asyncHandler(async (req, res, next) => {
 const getReceivedReferences = asyncHandler(async (req, res, next) => {
   try {
     let { memberId } = req.params;
-    
+
     if (!memberId && req.user) {
       // If no member ID is provided, use the current user's member ID
       const member = await prisma.member.findFirst({
-        where: { userId: req.user.id }
+        where: { userId: req.user.id },
       });
-      
+
       if (!member) {
-        return next(createError(400, "No member profile found for current user"));
+        return next(
+          createError(400, "No member profile found for current user")
+        );
       }
-      
+
       memberId = member.id;
     }
 
@@ -454,32 +499,32 @@ const getMemberInfoForReference = asyncHandler(async (req, res, next) => {
     // Get current user's member ID
     const currentMember = await prisma.member.findFirst({
       where: { userId: req.user.id },
-      select: { id: true, chapterId: true }
+      select: { id: true, chapterId: true },
     });
-    
+
     if (!currentMember) {
       return next(createError(400, "No member profile found for current user"));
     }
-    
+
     // Get member list from the same chapter
     const members = await prisma.member.findMany({
-      where: { 
+      where: {
         chapterId: currentMember.chapterId,
-        active: true
+        active: true,
       },
       select: {
         id: true,
         memberName: true,
         email: true,
         organizationName: true,
-        businessCategory: true
+        businessCategory: true,
       },
-      orderBy: { memberName: 'asc' }
+      orderBy: { memberName: "asc" },
     });
-    
+
     res.json({
       currentMemberId: currentMember.id,
-      members
+      members,
     });
   } catch (err) {
     next(err);
@@ -493,51 +538,53 @@ const getReferenceMetrics = asyncHandler(async (req, res, next) => {
   try {
     // Extract parameters
     let { memberId, startDate, endDate } = req.query;
-    
+
     // Default to current user's member ID if not specified
     if (!memberId) {
       const member = await prisma.member.findFirst({
-        where: { userId: req.user.id }
+        where: { userId: req.user.id },
       });
-      
+
       if (!member) {
-        return next(createError(400, "No member profile found for current user"));
+        return next(
+          createError(400, "No member profile found for current user")
+        );
       }
-      
+
       memberId = member.id;
     } else {
       memberId = int(memberId);
     }
-    
+
     // Default date range to last 30 days if not specified
     const end = endDate ? new Date(endDate) : new Date();
     const start = startDate ? new Date(startDate) : new Date(end);
     if (!startDate) {
       start.setDate(start.getDate() - 30); // Default to 30 days ago
     }
-    
+
     // Query for references given
     const referencesGiven = await prisma.reference.count({
       where: {
         giverId: memberId,
         date: {
           gte: start,
-          lte: end
-        }
-      }
+          lte: end,
+        },
+      },
     });
-    
+
     // Query for references received
     const referencesReceived = await prisma.reference.count({
       where: {
         receiverId: memberId,
         date: {
           gte: start,
-          lte: end
-        }
-      }
+          lte: end,
+        },
+      },
     });
-    
+
     // Query for reference conversions
     const referencesConverted = await prisma.reference.count({
       where: {
@@ -545,16 +592,17 @@ const getReferenceMetrics = asyncHandler(async (req, res, next) => {
         status: "converted",
         date: {
           gte: start,
-          lte: end
-        }
-      }
+          lte: end,
+        },
+      },
     });
-    
+
     // Calculate conversion rate
-    const conversionRate = referencesReceived > 0 
-      ? (referencesConverted / referencesReceived) * 100 
-      : 0;
-    
+    const conversionRate =
+      referencesReceived > 0
+        ? (referencesConverted / referencesReceived) * 100
+        : 0;
+
     // Status breakdown for given references
     const givenStatusBreakdown = await prisma.$queryRaw`
       SELECT status, COUNT(*) as count
@@ -564,7 +612,7 @@ const getReferenceMetrics = asyncHandler(async (req, res, next) => {
       AND date <= ${end}
       GROUP BY status
     `;
-    
+
     // Status breakdown for received references
     const receivedStatusBreakdown = await prisma.$queryRaw`
       SELECT status, COUNT(*) as count
@@ -574,19 +622,19 @@ const getReferenceMetrics = asyncHandler(async (req, res, next) => {
       AND date <= ${end}
       GROUP BY status
     `;
-    
+
     res.json({
       memberId,
       dateRange: {
-        start: start.toISOString().split('T')[0],
-        end: end.toISOString().split('T')[0]
+        start: start.toISOString().split("T")[0],
+        end: end.toISOString().split("T")[0],
       },
       referencesGiven,
       referencesReceived,
       referencesConverted,
       conversionRate: parseFloat(conversionRate.toFixed(2)),
       givenStatusBreakdown,
-      receivedStatusBreakdown
+      receivedStatusBreakdown,
     });
   } catch (err) {
     next(err);
@@ -604,4 +652,4 @@ module.exports = {
   getReceivedReferences,
   getMemberInfoForReference,
   getReferenceMetrics,
-}; 
+};

@@ -93,7 +93,7 @@ const acl = require("../middleware/acl");
  *                 totalCategories:
  *                   type: integer
  */
-router.get("/", auth, acl("categories.read"), categoryController.getCategories);
+router.get("/", auth, categoryController.getCategories);
 
 /**
  * @swagger
@@ -117,7 +117,7 @@ router.get("/", auth, acl("categories.read"), categoryController.getCategories);
  *       404:
  *         description: Category not found
  */
-router.get("/:id", auth, acl("categories.read"), categoryController.getCategoryById);
+router.get("/:id", auth, categoryController.getCategoryById);
 
 /**
  * @swagger
@@ -150,7 +150,7 @@ router.get("/:id", auth, acl("categories.read"), categoryController.getCategoryB
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, acl("categories.write"), categoryController.createCategory);
+router.post("/", auth, categoryController.createCategory);
 
 /**
  * @swagger
@@ -186,7 +186,7 @@ router.post("/", auth, acl("categories.write"), categoryController.createCategor
  *       404:
  *         description: Category not found
  */
-router.put("/:id", auth, acl("categories.update"), categoryController.updateCategory);
+router.put("/:id", auth, categoryController.updateCategory);
 
 /**
  * @swagger
@@ -213,6 +213,6 @@ router.put("/:id", auth, acl("categories.update"), categoryController.updateCate
  *       404:
  *         description: Category not found
  */
-router.delete("/:id", auth, acl("categories.delete"), categoryController.deleteCategory);
+router.delete("/:id", auth, categoryController.deleteCategory);
 
 module.exports = router;
