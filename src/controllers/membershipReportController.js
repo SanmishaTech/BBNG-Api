@@ -82,6 +82,7 @@ const exportMembers = async (req, res, next) => {
           venueExpiryDate: {
             gte: fromDateObj
           }
+          //asdas
         });
       } else if (toDate) {
         dateConditions.push({
@@ -241,5 +242,3 @@ const exportMembers = async (req, res, next) => {
     next(error);
   }
 };
-
-module.exports = { exportMembers };
