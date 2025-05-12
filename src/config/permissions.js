@@ -7,10 +7,7 @@ module.exports = {
   "users.export": ["super_admin"],
   "members.export": ["super_admin", "admin", "member", "user"],
   "transactions.export": ["super_admin", "admin", "member", "user"],
-  //agencies
-  "agencies.read": ["super_admin"],
-  "agencies.write": ["super_admin"],
-  "agencies.delete": ["super_admin"],
+ 
   //packages
   "packages.read": ["super_admin"],
   "packages.write": ["super_admin"],
@@ -43,31 +40,11 @@ module.exports = {
   "onetoones.read": ["super_admin", "admin", "member", "user"],
   "onetoones.write": ["super_admin", "admin", "member", "user"],
   "onetoones.delete": ["super_admin", "admin", "member", "user"],
-  //superAdmin and admin sections
-  //branches
-  "branches.read": ["super_admin", "admin"],
-  "branches.write": ["super_admin", "admin"],
-  "branches.delete": ["super_admin", "admin"],
-  //countries
-  "countries.write": ["super_admin", "admin"],
-  "countries.delete": ["super_admin", "admin"],
-  "countries.read": ["super_admin", "admin"],
-  //states
-  "states.write": ["super_admin", "admin"],
-  "states.delete": ["super_admin", "admin"],
-  "states.read": ["super_admin", "admin"],
-  //cities
-  "cities.write": ["super_admin", "admin"],
-  "cities.delete": ["super_admin", "admin"],
-  "cities.read": ["super_admin", "admin"],
-  //sectors
-  "sectors.write": ["super_admin", "admin"],
-  "sectors.delete": ["super_admin", "admin"],
-  "sectors.read": ["super_admin", "admin"],
+ 
+   
+ 
+ 
   //roles
-  "roles.read": ["super_admin", "admin"],
-  //staff
-  "staff.read": ["admin"],
-  "staff.write": ["admin"],
-  "staff.delete": ["admin"],
+  "roles.read": ["super_admin"],
+ 
 };
