@@ -436,8 +436,15 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
  */
 const getGivenReferences = asyncHandler(async (req, res, next) => {
   try {
+    // First check if memberId is in params
     let { memberId } = req.params;
-
+    
+    // If not in params, check if it's in query params
+    if (!memberId && req.query.memberId) {
+      memberId = req.query.memberId;
+    }
+    
+    // If still no memberId and we have a logged-in user, use their member ID
     if (!memberId && req.user) {
       // If no member ID is provided, use the current user's member ID
       const member = await prisma.member.findFirst({
@@ -453,9 +460,65 @@ const getGivenReferences = asyncHandler(async (req, res, next) => {
       memberId = member.id;
     }
 
-    // Use the listReferences function with the giverId parameter
-    req.query.giverId = memberId;
-    return listReferences(req, res, next);
+    let {
+      page = 1,
+      limit = 10,
+      search = "",
+      status,
+      self,
+      sortBy = "date",
+      sortOrder = "desc",
+      exportData = false,
+    } = req.query;
+
+    const where = { giverId: int(memberId) };
+
+    // Handle self-reference filtering
+    if (self === "false" || self === false) {
+      where.NOT = {
+        receiverId: int(memberId), // Don't include references where receiver is same as giver
+      };
+    } else if (self === "true" || self === true) {
+      where.receiverId = int(memberId); // Only include references where receiver is same as giver
+    }
+
+    if (status) where.status = status;
+
+    if (search) {
+      where.OR = [
+        { nameOfReferral: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { remarks: { contains: search, mode: "insensitive" } },
+        { mobile1: { contains: search } },
+      ];
+    }
+
+    const skip = (int(page) - 1) * int(limit);
+    const total = await prisma.reference.count({ where });
+
+    const rows = await prisma.reference.findMany({
+      where,
+      skip: exportData ? undefined : skip,
+      take: exportData ? undefined : int(limit),
+      orderBy: { [sortBy]: sortOrder },
+      include: {
+        giver: { select: { id: true, memberName: true, email: true } },
+        receiver: { select: { id: true, memberName: true, email: true } },
+        chapter: { select: { id: true, name: true } },
+      },
+    });
+
+    const payload =
+      exportData === "true"
+        ? { references: rows }
+        : {
+            references: rows,
+            page: int(page),
+            totalPages: Math.ceil(total / int(limit)),
+            total,
+          };
+
+    res.json(payload);
   } catch (err) {
     next(err);
   }
