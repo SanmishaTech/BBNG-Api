@@ -50,27 +50,27 @@ app.use(express.urlencoded({ extended: true })); // For application/x-www-form-u
 const uploadsPath = path.join(__dirname, "..", "uploads");
 console.log(`Serving static files from: ${uploadsPath}`); // Verify this path on startup!
 app.use("/uploads", express.static(uploadsPath));
-app.use("/auth", authRoutes);
-app.use("/roles", roleRoutes);
-app.use("/users", userRoutes);
-app.use("/zones", zoneRoutes);
-app.use("/locations", locationRoutes);
-app.use("/trainings", trainingRoutes);
-app.use("/categories", categoryRoutes);
-app.use("/sites", siteRoutes); // Ensure this line is included to handle site routes
-app.use("/messages", messageRoutes); // Add this line to include message routes
-app.use("/chapters", chapterRoutes);
-app.use("/chapter-meetings", chapterMeetingRoutes); // Add routes for chapter meetings
+app.use("/api/auth", authRoutes);
+app.use("/api/roles", roleRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/zones", zoneRoutes);
+app.use("/api/locations", locationRoutes);
+app.use("/api/trainings", trainingRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/sites", siteRoutes); 
+app.use("/api/messages", messageRoutes); // Add this line to include message routes
+app.use("/api/chapters", chapterRoutes);
+app.use("/api/chapter-meetings", chapterMeetingRoutes); // Add routes for chapter meetings
 app.use("/api/members", memberRoutes);
-app.use("/packages", packageRoutes); // Add routes for packages
-app.use("/memberships", membershipRoutes); // Add routes for memberships
-app.use("/visitors", visitorRoutes); // Add routes for visitors
-app.use("/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
+app.use("/api/packages", packageRoutes); // Add routes for packages
+app.use("/api/memberships", membershipRoutes); // Add routes for memberships
+app.use("/api/visitors", visitorRoutes); // Add routes for visitors
+app.use("/api/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
 app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
- app.use("/requirements", requirementRoutes); // Add routes for requirements
-app.use("/memberreports", memberReportRoutes); // Add route for member export reports
-app.use("/transactionreports", transactionReportRoutes); // Add route for transaction export reports
- app.use("/references", referenceRoutes);
+ app.use("/api/requirements", requirementRoutes); // Add routes for requirements
+app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
+app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
+ app.use("/api/references", referenceRoutes);
  app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
