@@ -24,8 +24,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const requirementRoutes = require("./routes/requirements");
 const memberReportRoutes = require("./routes/memberReports");
 const transactionReportRoutes = require("./routes/transactionReports");
- const oneToOneRoutes = require("./routes/oneToOneRoutes");
-const referenceRoutes = require("./routes/referenceRoutes");
+const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const membershipReportRoutes = require("./routes/membershipReports");
 
 const swaggerRouter = require("./swagger");
