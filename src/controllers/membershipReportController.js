@@ -243,4 +243,6 @@ const exportMembers = async (req, res, next) => {
   }
 };
 
-module.exports = { exportMembers };
+module.exports = {
+  exportMembers
+};
