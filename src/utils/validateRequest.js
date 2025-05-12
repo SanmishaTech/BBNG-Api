@@ -59,7 +59,7 @@ const validateRequest = async (schema, data, files = {}) => {
           message: err.message,
         };
       });
-      throw createError(400, "Validation failed", { errors });
+      return errors;
     }
     throw error;
   }
