@@ -5,6 +5,8 @@ module.exports = {
   "users.write": ["super_admin"],
   "users.delete": ["super_admin"],
   "users.export": ["super_admin"],
+  "members.export": ["super_admin", "admin", "member", "user"],
+  "transactions.export": ["super_admin", "admin", "member", "user"],
   //agencies
   "agencies.read": ["super_admin"],
   "agencies.write": ["super_admin"],
@@ -33,6 +35,14 @@ module.exports = {
   "messages.write": ["super_admin", "admin"],
   "messages.update": ["super_admin", "admin"],
   "messages.delete": ["super_admin"],
+  // requirements
+  "requirements.read": ["super_admin", "admin", "member", "user"],
+  "requirements.write": ["super_admin", "admin", "member", "user"],
+  "requirements.delete": ["super_admin", "admin", "member", "user"],
+  // one-to-ones
+  "onetoones.read": ["super_admin", "admin", "member", "user"],
+  "onetoones.write": ["super_admin", "admin", "member", "user"],
+  "onetoones.delete": ["super_admin", "admin", "member", "user"],
   //superAdmin and admin sections
   //branches
   "branches.read": ["super_admin", "admin"],

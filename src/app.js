@@ -21,9 +21,13 @@ const membershipRoutes = require("./routes/memberships");
 const visitorRoutes = require("./routes/visitorRoutes");
 const meetingAttendanceRoutes = require("./routes/meetingAttendanceRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+ const requirementRoutes = require("./routes/requirements");
+const memberReportRoutes = require("./routes/memberReports");
+const transactionReportRoutes = require("./routes/transactionReports");
+ 
 const referenceRoutes = require("./routes/referenceRoutes");
 
-const swaggerRouter = require("./swagger");
+ const swaggerRouter = require("./swagger");
 
 const path = require("path");
 const config = require("./config/config");
@@ -63,8 +67,11 @@ app.use("/memberships", membershipRoutes); // Add routes for memberships
 app.use("/visitors", visitorRoutes); // Add routes for visitors
 app.use("/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
 app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
-app.use("/references", referenceRoutes);
-app.use(swaggerRouter); // Add this line to include Swagger documentation
+ app.use("/requirements", requirementRoutes); // Add routes for requirements
+app.use("/memberreports", memberReportRoutes); // Add route for member export reports
+app.use("/transactionreports", transactionReportRoutes); // Add route for transaction export reports
+ app.use("/references", referenceRoutes);
+ app.use(swaggerRouter); // Add this line to include Swagger documentation
 
 app.use((req, res, next) => {
   next(createError(404));
