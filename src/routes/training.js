@@ -83,7 +83,7 @@ const acl = require("../middleware/acl");
  *                 totalTrainings:
  *                   type: integer
  */
-router.get("/", auth, acl("trainings.read"), trainingController.getTrainings);
+router.get("/", auth, trainingController.getTrainings);
 
 /**
  * @swagger
@@ -107,7 +107,7 @@ router.get("/", auth, acl("trainings.read"), trainingController.getTrainings);
  *       404:
  *         description: Training not found
  */
-router.get("/:id", auth, acl("trainings.read"), trainingController.getTrainingById);
+router.get("/:id", auth, trainingController.getTrainingById);
 
 /**
  * @swagger
@@ -141,7 +141,7 @@ router.get("/:id", auth, acl("trainings.read"), trainingController.getTrainingBy
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, acl("trainings.write"), trainingController.createTraining);
+router.post("/", auth,  trainingController.createTraining);
 
 /**
  * @swagger
@@ -178,7 +178,7 @@ router.post("/", auth, acl("trainings.write"), trainingController.createTraining
  *       404:
  *         description: Training not found
  */
-router.put("/:id", auth, acl("trainings.update"), trainingController.updateTraining);
+router.put("/:id", auth,  trainingController.updateTraining);
 
 /**
  * @swagger
@@ -205,6 +205,6 @@ router.put("/:id", auth, acl("trainings.update"), trainingController.updateTrain
  *       404:
  *         description: Training not found
  */
-router.delete("/:id", auth, acl("trainings.delete"), trainingController.deleteTraining);
+router.delete("/:id", auth,  trainingController.deleteTraining);
 
 module.exports = router;

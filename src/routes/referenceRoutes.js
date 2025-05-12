@@ -7,6 +7,7 @@ const {
   updateReference, 
   deleteReference,
   updateReferenceStatus,
+  getGivenReferences,
   getReceivedReferences,
   getMemberInfoForReference
 } = require('../controllers/referenceController');
@@ -19,6 +20,7 @@ router.use(auth);
 // Define specific routes before parameter routes
 
 // GET routes with specific paths
+router.get('/given', getGivenReferences);
 router.get('/received', getReceivedReferences);
 router.get('/member/:memberId', getMemberInfoForReference);
 
