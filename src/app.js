@@ -36,6 +36,8 @@ app.use(morgan("dev"));
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource loading
+    crossOriginOpenerPolicy: false, // Disable COOP header since we're on HTTP
+    contentSecurityPolicy: false, // Disable CSP for HTTP deployment
   })
 );
 app.use(
