@@ -44,7 +44,7 @@ app.use(
 );
 app.use(
   cors({
-    origin: config.frontendUrl || "http://15.207.30.113", // Allow requests from this origin
+    origin: config.frontendUrl || "http://localhost:5173", // Allow requests from this origin
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Allowed HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
   })
