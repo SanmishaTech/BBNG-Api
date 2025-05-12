@@ -52,8 +52,8 @@ app.use(express.urlencoded({ extended: true })); // For application/x-www-form-u
 
 // Determine the correct frontend path based on environment
 const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/BBNG-/dist')
-  : path.join(__dirname, "../../frontend/dist");
+  ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/BBNG-FrontEnd/dist')
+  : path.join(__dirname, "../../BBNG-FrontEnd/dist");
 
 console.log(`Serving frontend from: ${frontendPath}`);
 app.use(express.static(frontendPath));
@@ -61,7 +61,7 @@ app.use(express.static(frontendPath));
 // Define a route to serve backend/dist files directly if needed
 const backendDistPath = process.env.NODE_ENV === 'production'
   ? path.join(process.env.BACKEND_DIST_PATH || '/opt/bitnami/apache/htdocs/BBNG-Api/dist')
-  : path.join(__dirname, "../backend/dist");
+  : path.join(__dirname, "../BBNG-Api/dist");
 
 app.use("/backend", express.static(backendDistPath));
 
