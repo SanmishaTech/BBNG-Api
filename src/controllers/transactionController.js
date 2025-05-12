@@ -268,6 +268,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     where: { id: chapterId },
     data: updateData
   });
+  
 
   res.status(201).json(transaction);
 });
@@ -287,6 +288,106 @@ const getTransactionById = asyncHandler(async (req, res) => {
   if (!transaction) throw createError(404, "Transaction not found");
 
   res.json(transaction);
+});
+
+const updateBankClosingBalance  = asyncHandler(async (chapterId) => {
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId }
+  });
+
+  if (!chapter) {
+    throw createError(404, "Chapter not found");
+  }
+  
+  // Get sum of credit transactions
+  const creditSumResult = await prisma.transaction.aggregate({
+    _sum: {
+      amount: true
+    },
+    where: { 
+      chapterId, 
+      transactionType: "credit",
+      accountType: "bank"
+    }
+  });
+  
+  // Get sum of debit transactions
+  const debitSumResult = await prisma.transaction.aggregate({
+    _sum: {
+      amount: true
+    },
+    where: { 
+      chapterId, 
+      transactionType: "debit",
+      accountType: "bank"
+    }
+  });
+  
+  const creditSum = creditSumResult._sum.amount || 0;
+  const debitSum = debitSumResult._sum.amount || 0;
+  
+  // calculate the new bank closing balance
+  const newBankClosingBalance = new Prisma.Decimal(chapter.bankopeningbalance || 0)
+    .add(new Prisma.Decimal(creditSum))
+    .sub(new Prisma.Decimal(debitSum));
+    
+  await prisma.chapter.update({
+    where: { id: chapterId },
+    data: { bankclosingbalance: newBankClosingBalance }
+  });
+
+  return true;
+});
+
+  
+
+const updateCashClosingBalance  = asyncHandler(async (chapterId) => {
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId }
+  });
+
+  if (!chapter) {
+    throw createError(404, "Chapter not found");
+  }
+  
+  // Get sum of credit transactions
+  const creditSumResult = await prisma.transaction.aggregate({
+    _sum: {
+      amount: true
+    },
+    where: { 
+      chapterId, 
+      transactionType: "credit",
+      accountType: "cash"
+    }
+  });
+  
+  // Get sum of debit transactions
+  const debitSumResult = await prisma.transaction.aggregate({
+    _sum: {
+      amount: true
+    },
+    where: { 
+      chapterId, 
+      transactionType: "debit",
+      accountType: "cash"
+    }
+  });
+  
+  const creditSum = creditSumResult._sum.amount || 0;
+  const debitSum = debitSumResult._sum.amount || 0;
+  
+  // calculate the new bank closing balance
+  const newCashClosingBalance = new Prisma.Decimal(chapter.cashopeningbalance || 0)
+    .add(new Prisma.Decimal(creditSum))
+    .sub(new Prisma.Decimal(debitSum));
+    
+  await prisma.chapter.update({
+    where: { id: chapterId },
+    data: { cashclosingbalance: newCashClosingBalance }
+  });
+
+  return true;
 });
 
 /** PUT /api/transactions/:id
@@ -379,69 +480,15 @@ const updateTransaction = asyncHandler(async (req, res) => {
       where: { id: existingTransaction.chapterId }
     });
     
-    let updateData = {};
-    
-    // Revert old transaction 
-    if (existingTransaction.accountType === "bank") {
-      if (existingTransaction.transactionType === "credit") {
-        updateData.bankclosingbalance = new Prisma.Decimal(chapter.bankclosingbalance || 0).sub(new Prisma.Decimal(existingTransaction.amount));
-      } else {
-        updateData.bankclosingbalance = new Prisma.Decimal(chapter.bankclosingbalance || 0).add(new Prisma.Decimal(existingTransaction.amount));
-      }
-    } else { // cash
-      if (existingTransaction.transactionType === "credit") {
-        updateData.cashclosingbalance = new Prisma.Decimal(chapter.cashclosingbalance || 0).sub(new Prisma.Decimal(existingTransaction.amount));
-      } else {
-        updateData.cashclosingbalance = new Prisma.Decimal(chapter.cashclosingbalance || 0).add(new Prisma.Decimal(existingTransaction.amount));
-      }
-    }
-    
     // Update transaction
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
       data: processedData
     });
     
-    // Get the updated transaction to apply new effect
-    const newTransaction = {
-      ...existingTransaction,
-      ...req.body
-    };
-    
-    // Apply new transaction effect
-    const accountType = newTransaction.accountType;
-    const transactionType = newTransaction.transactionType;
-    const amount = newTransaction.amount;
-    
-    if (accountType === "bank") {
-      if (transactionType === "credit") {
-        updateData.bankclosingbalance = new Prisma.Decimal(updateData.bankclosingbalance || chapter.bankclosingbalance || 0).add(new Prisma.Decimal(amount));
-      } else {
-        // Check if this debit would result in a negative balance
-        const newBalance = new Prisma.Decimal(updateData.bankclosingbalance || chapter.bankclosingbalance || 0).sub(new Prisma.Decimal(amount));
-        if (newBalance.isNegative()) {
-          throw createError(400, "Transaction would result in a negative bank balance");
-        }
-        updateData.bankclosingbalance = newBalance;
-      }
-    } else { // cash
-      if (transactionType === "credit") {
-        updateData.cashclosingbalance = new Prisma.Decimal(updateData.cashclosingbalance || chapter.cashclosingbalance || 0).add(new Prisma.Decimal(amount));
-      } else {
-        // Check if this debit would result in a negative balance
-        const newBalance = new Prisma.Decimal(updateData.cashclosingbalance || chapter.cashclosingbalance || 0).sub(new Prisma.Decimal(amount));
-        if (newBalance.isNegative()) {
-          throw createError(400, "Transaction would result in a negative cash balance");
-        }
-        updateData.cashclosingbalance = newBalance;
-      }
-    }
-    
-    // Update chapter with new balances
-    await prisma.chapter.update({
-      where: { id: existingTransaction.chapterId },
-      data: updateData
-    });
+    // Recalculate balances using the dedicated functions
+    await updateBankClosingBalance(existingTransaction.chapterId);
+    await updateCashClosingBalance(existingTransaction.chapterId);
     
     return updatedTransaction;
   });
@@ -493,10 +540,8 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     });
     
     // Update chapter with new balances
-    await prisma.chapter.update({
-      where: { id: existingTransaction.chapterId },
-      data: updateData
-    });
+    await updateBankClosingBalance(existingTransaction.chapterId);
+    await updateCashClosingBalance(existingTransaction.chapterId);
   });
 
   res.json({ message: "Transaction deleted successfully" });
@@ -507,5 +552,7 @@ module.exports = {
   createTransaction,
   getTransactionById,
   updateTransaction,
-  deleteTransaction
+  deleteTransaction,
+  updateBankClosingBalance,
+  updateCashClosingBalance,
 };

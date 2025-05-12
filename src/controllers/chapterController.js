@@ -3,6 +3,8 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
+const {updateBankClosingBalance} = require("./transactionController");  
+const {updateCashClosingBalance} = require("./transactionController");    
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -135,6 +137,9 @@ const createChapter = asyncHandler(async (req, res) => {
   const chapter = await prisma.chapter.create({
     data: { ...req.body, date: new Date(req.body.date) },
   });
+
+  await updateBankClosingBalance(chapter.id);
+  await updateCashClosingBalance(chapter.id);
   res.status(201).json(chapter);
 });
 
@@ -206,6 +211,9 @@ const updateChapter = asyncHandler(async (req, res) => {
     where: { id },
     data: req.body,
   });
+
+  await updateBankClosingBalance(id);
+  await updateCashClosingBalance(id);
   res.json(updated);
 });
 
