@@ -182,7 +182,7 @@ const handleUploadErrors = (err, req, res, next) => {
  *                 totalMessages:
  *                   type: integer
  */
-router.get("/", auth, acl("messages.read"), messageController.getMessages);
+router.get("/", auth, messageController.getMessages);
 
 /**
  * @swagger
@@ -206,7 +206,7 @@ router.get("/", auth, acl("messages.read"), messageController.getMessages);
  *       404:
  *         description: Message not found
  */
-router.get("/:id", auth, acl("messages.read"), messageController.getMessageById);
+router.get("/:id", auth, messageController.getMessageById);
 
 /**
  * @swagger
@@ -246,7 +246,7 @@ router.get("/:id", auth, acl("messages.read"), messageController.getMessageById)
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, acl("messages.write"), upload.single('attachment'), handleUploadErrors, messageController.createMessage);
+router.post("/", auth, upload.single('attachment'), handleUploadErrors, messageController.createMessage);
 
 /**
  * @swagger
@@ -292,7 +292,7 @@ router.post("/", auth, acl("messages.write"), upload.single('attachment'), handl
  *       404:
  *         description: Message not found
  */
-router.put("/:id", auth, acl("messages.update"), upload.single('attachment'), handleUploadErrors, messageController.updateMessage);
+router.put("/:id", auth, upload.single('attachment'), handleUploadErrors, messageController.updateMessage);
 
 /**
  * @swagger
@@ -319,7 +319,7 @@ router.put("/:id", auth, acl("messages.update"), upload.single('attachment'), ha
  *       404:
  *         description: Message not found
  */
-router.delete("/:id", auth, acl("messages.delete"), messageController.deleteMessage);
+router.delete("/:id", auth, messageController.deleteMessage);
 
 /**
  * @swagger
@@ -344,6 +344,6 @@ router.delete("/:id", auth, acl("messages.delete"), messageController.deleteMess
  *       404:
  *         description: Message or attachment not found
  */
-router.get("/:id/attachment", auth, acl("messages.read"), messageController.downloadAttachment);
+router.get("/:id/attachment", auth, messageController.downloadAttachment);
 
 module.exports = router; 
