@@ -191,7 +191,7 @@ const createReference = asyncHandler(async (req, res, next) => {
     });
 
     // Use validateRequest utility for validation
-    const validatedData = await validateRequest(schema, req.body);
+    const validatedData = await validateRequest(schema, req.body,res,next);
 
     // Check if the current user has a corresponding member record
     const member = await prisma.member.findFirst({
