@@ -24,12 +24,17 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const requirementRoutes = require("./routes/requirements");
 const memberReportRoutes = require("./routes/memberReports");
 const transactionReportRoutes = require("./routes/transactionReports");
-const oneToOneRoutes = require("./routes/oneToOneRoutes");
+ const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const referenceRoutes = require("./routes/referenceRoutes");
 const membershipReportRoutes = require("./routes/membershipReports");
 
 const swaggerRouter = require("./swagger");
-
+ const oneToOneRoutes = require("./routes/oneToOneRoutes"); 
+const referenceRoutes = require("./routes/referenceRoutes");
+const membershipReportRoutes = require("./routes/membershipReports");
+ 
+ const swaggerRouter = require("./swagger");
+ 
 const path = require("path");
 const config = require("./config/config");
 const app = express();
@@ -100,14 +105,22 @@ app.use("/api/memberships", membershipRoutes); // Add routes for memberships
 app.use("/api/visitors", visitorRoutes); // Add routes for visitors
 app.use("/api/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
 app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
-app.use("/api/requirements", requirementRoutes); // Add routes for requirements
+ app.use("/api/requirements", requirementRoutes); // Add routes for requirements
 app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
 app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
 app.use("/api/references", referenceRoutes);
 app.use("/api/one-to-ones", oneToOneRoutes); // Add route for member search
 
 app.use(swaggerRouter); // Add this line to include Swagger documentation
+  
+ app.use("/api/requirements", requirementRoutes); // Add routes for requirements
+app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
+app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
+ app.use("/api/references", referenceRoutes);
+ app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
 
+ app.use(swaggerRouter); // Add this line to include Swagger documentation
+ 
 // Catch-all route to serve index.html for client-side routing (must be after all API routes)
 app.get("*", (req, res) => {
   const indexPath =
