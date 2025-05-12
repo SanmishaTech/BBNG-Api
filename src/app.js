@@ -48,13 +48,26 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For application/x-www-form-urlencoded (optional, but common)
 
-// Serve frontend build files - path is relative to project root
-app.use(express.static(path.join(__dirname, "../../frontend/dist")));
+// Determine the correct frontend path based on environment
+const frontendPath = process.env.NODE_ENV === 'production' 
+  ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/BBNG-/dist')
+  : path.join(__dirname, "../../frontend/dist");
+
+console.log(`Serving frontend from: ${frontendPath}`);
+app.use(express.static(frontendPath));
 
 // Define a route to serve backend/dist files directly if needed
-app.use("/backend", express.static(path.join(__dirname, "../backend/dist")));
+const backendDistPath = process.env.NODE_ENV === 'production'
+  ? path.join(process.env.BACKEND_DIST_PATH || '/opt/bitnami/apache/htdocs/BBNG-Api/dist')
+  : path.join(__dirname, "../backend/dist");
 
-const uploadsPath = path.join(__dirname, "..", "uploads");
+app.use("/backend", express.static(backendDistPath));
+
+// Determine the correct uploads path based on environment
+const uploadsPath = process.env.NODE_ENV === 'production'
+  ? process.env.UPLOADS_PATH || '/opt/bitnami/apache/htdocs/BBNG-Api/uploads'
+  : path.join(__dirname, "..", "uploads");
+
 console.log(`Serving static files from: ${uploadsPath}`); // Verify this path on startup!
 app.use("/uploads", express.static(uploadsPath));
 
@@ -83,7 +96,12 @@ app.use("/api/transactionreports", transactionReportRoutes); // Add route for tr
 
 // Catch-all route to serve index.html for client-side routing (must be after all API routes)
 app.get("*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../../frontend/dist/index.html"));
+  const indexPath = process.env.NODE_ENV === 'production'
+    ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/frontend/dist', 'index.html')
+    : path.resolve(__dirname, "../../frontend/dist/index.html");
+  
+  console.log(`Serving index.html from: ${indexPath}`);
+  res.sendFile(indexPath);
 });
 
 // 404 handler for any remaining routes
