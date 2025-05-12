@@ -114,6 +114,42 @@ const login = async (req, res, next) => {
           .json({ errors: { message: "Invalid email or password" } });
       }
 
+      // Check if memberships are expired (hoExpiryDate or venueExpiryDate)
+      const now = new Date();
+      let hasActiveMembership = false;
+      let expiryStatusChanged = false;
+      
+      // A user is active ONLY if BOTH venue and HO memberships are set AND at least one is active
+      // If any membership is null, user should be inactive
+      
+      // Check if both memberships exist (not null)
+      if (member.venueExpiryDate && member.hoExpiryDate) {
+        // Check if at least one membership is active
+        if (new Date(member.venueExpiryDate) > now || new Date(member.hoExpiryDate) > now) {
+          hasActiveMembership = true;
+        }
+      } else {
+        // If any membership is null, user should be inactive
+        hasActiveMembership = false;
+      }
+      
+      // If membership status differs from user's active status, update it
+      if (member.users.active !== hasActiveMembership) {
+        console.log(`Updating user ID ${member.users.id} active status to ${hasActiveMembership} during login check`);
+        await prisma.user.update({
+          where: { id: member.users.id },
+          data: { active: hasActiveMembership }
+        });
+        
+        // If we're setting to inactive, we need to reject the login
+        if (!hasActiveMembership) {
+          return res
+            .status(403)
+            .json({ errors: { message: "Account is inactive due to expired membership" } });
+        }
+      }
+      
+      // Regular inactive check
       if (!member.active || !member.users.active) {
         return res
           .status(403)

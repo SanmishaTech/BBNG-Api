@@ -48,7 +48,7 @@ const getVisitors = asyncHandler(async (req, res) => {
   const limit = Math.max(1, parseInt(req.query.limit) || 10);
   const skip = (page - 1) * limit;
 
-  const { search = "", meetingId, status } = req.query;
+  const { search = "", meetingId, status, chapterId, fromDate, toDate } = req.query;
   const sortBy = req.query.sortBy || "createdAt";
   const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
 
@@ -67,13 +67,50 @@ const getVisitors = asyncHandler(async (req, res) => {
     filters.push({
       meetingId: parseInt(meetingId),
     });
-  } else {
-    throw createError(400, "Meeting ID is required");
+  } else if (chapterId) {
+    // If no meetingId but chapterId is provided, filter by chapter
+    filters.push({
+      chapterId: parseInt(chapterId),
+    });
   }
+  
+  // Date range filter if provided
+  if (fromDate && toDate) {
+    filters.push({
+      meeting: {
+        date: {
+          gte: new Date(fromDate),
+          lte: new Date(toDate)
+        }
+      }
+    });
+  } else if (fromDate) {
+    filters.push({
+      meeting: {
+        date: {
+          gte: new Date(fromDate)
+        }
+      }
+    });
+  } else if (toDate) {
+    filters.push({
+      meeting: {
+        date: {
+          lte: new Date(toDate)
+        }
+      }
+    });
+  }
+  
   if (status) {
     filters.push({
       status,
     });
+  }
+  
+  // Require either meetingId or chapterId
+  if (!meetingId && !chapterId) {
+    throw createError(400, "Either Meeting ID or Chapter ID is required");
   }
   const where = filters.length ? { AND: filters } : {};
 
