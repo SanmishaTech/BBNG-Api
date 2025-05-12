@@ -20,20 +20,20 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  member            Member?   @relation("UserMemberRelation")
-  memberId          Int?      // This field still exists. If Member.userId is the true FK for the 
- 
+  member   Member? @relation("UserMemberRelation")
+  memberId Int? // This field still exists. If Member.userId is the true FK for the 
+
   @@map("users")
 }
 
 model Zone {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   name      String
-  active    Boolean   @default(true)
+  active    Boolean    @default(true)
   locations Location[] // Add this field for the reverse relation
   chapters  Chapter[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@map("zones")
 }
@@ -106,23 +106,25 @@ model Chapter {
   bankclosingbalance Decimal? @db.Decimal(10, 2)
   cashopeningbalance Decimal? @db.Decimal(10, 2)
   cashclosingbalance Decimal? @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  members Member[]
-  packages Package[] // Added relation to Package model
-  meetings ChapterMeeting[] // Relation to ChapterMeeting model
-  visitors Visitor[] @relation("VisitorHomeChapter") // Relation to Visitor model
+  members      Member[]
+  packages     Package[] // Added relation to Package model
+  meetings     ChapterMeeting[] // Relation to ChapterMeeting model
+  visitors     Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
   transactions Transaction[] // Added relation to Transaction model
+  references   Reference[] // Added relation to Reference model
+  oneToOnes    OneToOne[] // Relation to OneToOne model
 
   @@map("chapters")
 }
 
 model Member {
-  id                      Int       @id @default(autoincrement())
+  id                      Int      @id @default(autoincrement())
   memberName              String
   chapterId               Int?
-  chapter                 Chapter?  @relation(fields: [chapterId], references: [id])
+  chapter                 Chapter? @relation(fields: [chapterId], references: [id])
   category                String
   businessCategory        String
   gender                  String
@@ -139,14 +141,14 @@ model Member {
   orgAddressLine2         String?
   orgLocation             String
   orgPincode              String
-  organizationWebsite     String?   @db.Text
-  organizationDescription String?   @db.Text
+  organizationWebsite     String?  @db.Text
+  organizationDescription String?  @db.Text
 
-  addressLine1 String
-  location     String
-  addressLine2 String?
-  pincode      String
-  hoExpiryDate DateTime?
+  addressLine1    String
+  location        String
+  addressLine2    String?
+  pincode         String
+  hoExpiryDate    DateTime?
   venueExpiryDate DateTime?
 
   specificAsk  String? @db.Text
@@ -156,85 +158,92 @@ model Member {
   profilePicture1 String?
   profilePicture2 String?
   profilePicture3 String?
-  email    String @unique
-  password String
+  email           String  @unique
+  password        String
 
-  users    User?   @relation("UserMemberRelation", fields: [userId], references: [id])
-  userId   Int?    @unique // Foreign key to User model
+  users  User? @relation("UserMemberRelation", fields: [userId], references: [id])
+  userId Int?  @unique // Foreign key to User model
 
   memberships Membership[] // Relation to memberships
-  
-  invitedVisitors Visitor[] // Visitors invited by this member
+
+  invitedVisitors    Visitor[] // Visitors invited by this member
   meetingAttendances MeetingAttendance[] // Attendance records for this member
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  givenReferences     Reference[] @relation("GivenReferences")
+  receivedReferences  Reference[] @relation("ReceivedReferences")
+  
+  // One-to-One relationships
+  requestedOneToOnes  OneToOne[] @relation("RequestedOneToOnes")
+  receivedOneToOnes   OneToOne[] @relation("ReceivedOneToOnes")
+
   @@map("members")
 }
 
 model Package {
-  id            Int      @id @default(autoincrement())
-  packageName   String
-  periodMonths  Int      // Period in months: 1, 3, 6, 12
-  isVenueFee    Boolean  @default(false)
-  chapterId     Int?
-  chapter       Chapter? @relation(fields: [chapterId], references: [id])
-  basicFees     Decimal  @db.Decimal(10, 2)
-  gstRate       Decimal  @db.Decimal(5, 2)
-  gstAmount     Decimal  @db.Decimal(10, 2) // Calculated based on rate and basic fees
-  totalFees     Decimal  @db.Decimal(10, 2) // basic + gst
-  
-  memberships   Membership[]
-  
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  packageName  String
+  periodMonths Int // Period in months: 1, 3, 6, 12
+  isVenueFee   Boolean  @default(false)
+  chapterId    Int?
+  chapter      Chapter? @relation(fields: [chapterId], references: [id])
+  basicFees    Decimal  @db.Decimal(10, 2)
+  gstRate      Decimal  @db.Decimal(5, 2)
+  gstAmount    Decimal  @db.Decimal(10, 2) // Calculated based on rate and basic fees
+  totalFees    Decimal  @db.Decimal(10, 2) // basic + gst
+
+  memberships Membership[]
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("packages")
 }
 
 model Membership {
-  id              Int      @id @default(autoincrement())
-  memberId        Int
-  member          Member   @relation(fields: [memberId], references: [id])
-  invoiceNumber   String   @unique
-  invoiceDate     DateTime
-  
-  packageId       Int
-  package         Package  @relation(fields: [packageId], references: [id])
+  id            Int      @id @default(autoincrement())
+  memberId      Int
+  member        Member   @relation(fields: [memberId], references: [id])
+  invoiceNumber String   @unique
+  invoiceDate   DateTime
+
+  packageId        Int
+  package          Package  @relation(fields: [packageId], references: [id])
   packageStartDate DateTime
   packageEndDate   DateTime
-  
-  basicFees       Decimal  @db.Decimal(10, 2)
-  
-  cgstRate        Decimal? @db.Decimal(5, 2)
-  cgstAmount      Decimal? @db.Decimal(10, 2)
-  
-  sgstRate        Decimal? @db.Decimal(5, 2)
-  sgstAmount      Decimal? @db.Decimal(10, 2)
-  
-  igstRate        Decimal? @db.Decimal(5, 2)
-  igstAmount      Decimal? @db.Decimal(10, 2)
-  
-  totalTax        Decimal? @db.Decimal(10, 2)
-  totalAmount     Decimal? @db.Decimal(10, 2)
-  totalFees       Decimal  @db.Decimal(10, 2) 
-  
-  paymentDate     DateTime?
-  paymentMode     String?
-  
+
+  basicFees Decimal @db.Decimal(10, 2)
+
+  cgstRate   Decimal? @db.Decimal(5, 2)
+  cgstAmount Decimal? @db.Decimal(10, 2)
+
+  sgstRate   Decimal? @db.Decimal(5, 2)
+  sgstAmount Decimal? @db.Decimal(10, 2)
+
+  igstRate   Decimal? @db.Decimal(5, 2)
+  igstAmount Decimal? @db.Decimal(10, 2)
+
+  totalTax    Decimal? @db.Decimal(10, 2)
+  totalAmount Decimal? @db.Decimal(10, 2)
+  totalFees   Decimal  @db.Decimal(10, 2)
+
+  paymentDate DateTime?
+  paymentMode String?
+
   // Payment method specific fields
-  chequeNumber    String?
-  chequeDate      DateTime?
-  bankName        String?
-  neftNumber      String?
-  utrNumber       String?
-  
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  chequeNumber String?
+  chequeDate   DateTime?
+  bankName     String?
+  neftNumber   String?
+  utrNumber    String?
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("memberships")
 }
@@ -245,101 +254,180 @@ model ChapterMeeting {
   meetingTime  String
   meetingTitle String
   meetingVenue String
-  
-  chapter      Chapter  @relation(fields: [chapterId], references: [id])
-  chapterId    Int
-  
-  visitors     Visitor[]
-  attendances  MeetingAttendance[]
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  chapter   Chapter @relation(fields: [chapterId], references: [id])
+  chapterId Int
+
+  visitors    Visitor[]
+  attendances MeetingAttendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("chapter_meetings")
 }
 
 model Visitor {
-  id                Int       @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   // Basic Details
-  name              String
-  email             String?
-  gender            String
-  dateOfBirth       DateTime?
-  mobile1           String
-  mobile2           String?
-  isCrossChapter    Boolean   @default(false)
-  
+  name           String
+  email          String?
+  gender         String
+  dateOfBirth    DateTime?
+  mobile1        String
+  mobile2        String?
+  isCrossChapter Boolean   @default(false)
+
   // Chapter & Meeting Information
-  meeting           ChapterMeeting  @relation(fields: [meetingId], references: [id])
-  meetingId         Int
-  
-  homeChapter       Chapter?  @relation(name: "VisitorHomeChapter", fields: [chapterId], references: [id])
-  chapterId         Int?      // Home chapter for cross-chapter visitors
-  chapter           String    // Chapter name for non-members
-  
-  invitedById       Int?
-  invitedByMember   Member?   @relation(fields: [invitedById], references: [id])
-  
+  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id])
+  meetingId Int
+
+  homeChapter Chapter? @relation(name: "VisitorHomeChapter", fields: [chapterId], references: [id])
+  chapterId   Int? // Home chapter for cross-chapter visitors
+  chapter     String // Chapter name for non-members
+
+  invitedById     Int?
+  invitedByMember Member? @relation(fields: [invitedById], references: [id])
+
   // Business Details
-  category          String?
-  businessDetails   String?   @db.Text
-  
+  category        String?
+  businessDetails String? @db.Text
+
   // Address Details
-  addressLine1      String?
-  addressLine2      String?
-  city              String?
-  pincode           String?
-  
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  pincode      String?
+
   // Status
-  status            String?    // e.g., "Invited", "Confirmed", "Attended", "No-Show"
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  status String? // e.g., "Invited", "Confirmed", "Attended", "No-Show"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("visitors")
 }
 
 model MeetingAttendance {
-  id               Int           @id @default(autoincrement())
-  
-  meeting          ChapterMeeting @relation(fields: [meetingId], references: [id])
-  meetingId        Int
-  
-  member           Member        @relation(fields: [memberId], references: [id])
-  memberId         Int
-  
-  isPresent        Boolean       @default(false)
-  
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id Int @id @default(autoincrement())
+
+  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id])
+  meetingId Int
+
+  member   Member @relation(fields: [memberId], references: [id])
+  memberId Int
+
+  isPresent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([meetingId, memberId])
   @@map("meeting_attendances")
 }
 
 model Transaction {
-  id                Int      @id @default(autoincrement())
-  chapterId         Int
-  chapter           Chapter  @relation(fields: [chapterId], references: [id])
-  date              DateTime
-  accountType       String   // 'cash' or 'bank'
-  transactionType   String   // 'credit' or 'debit'
-  amount            Decimal  @db.Decimal(10, 2)
-  transactionHead   String?
-  narration         String?  @db.Text
+  id                 Int      @id @default(autoincrement())
+  chapterId          Int
+  chapter            Chapter  @relation(fields: [chapterId], references: [id])
+  date               DateTime
+  accountType        String // 'cash' or 'bank'
+  transactionType    String // 'credit' or 'debit'
+  amount             Decimal  @db.Decimal(10, 2)
+  transactionHead    String?
+  narration          String?  @db.Text
   transactionDetails String?  @db.Text
-  description       String?
-  reference         String?
-  hasInvoice        Boolean  @default(false)
-  gstRate           Decimal? @db.Decimal(5, 2)
-  gstAmount         Decimal? @db.Decimal(10, 2)
-  invoiceNumber     String?
-  partyName         String?
-  partyGSTNo        String?
-  partyAddress      String?
-  invoiceImage      String?  // Path to the uploaded invoice image
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  description        String?
+  reference          String?
+  hasInvoice         Boolean  @default(false)
+  gstRate            Decimal? @db.Decimal(5, 2)
+  gstAmount          Decimal? @db.Decimal(10, 2)
+  invoiceNumber      String?
+  partyName          String?
+  partyGSTNo         String?
+  partyAddress       String?
+  invoiceImage       String? // Path to the uploaded invoice image
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("transactions")
+}
+
+model Reference {
+  id             Int      @id @default(autoincrement())
+  date           DateTime
+  noOfReferences Int?
+  chapterId      Int
+  chapter        Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Member relationships
+  giverId    Int
+  receiverId Int
+  giver      Member @relation(name: "GivenReferences", fields: [giverId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  receiver   Member @relation(name: "ReceivedReferences", fields: [receiverId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  urgency String?
+  self    Boolean @default(false)
+
+  // Reference details
+  nameOfReferral String
+  mobile1        String
+  mobile2        String?
+  email          String?
+  remarks        String? @db.Text
+
+  // Address details
+  addressLine1 String?
+  location     String?
+  addressLine2 String?
+  pincode      String?
+
+  // Status tracking
+  status String @default("pending") // pending, contacted, converted, rejected
+
+  // Status history
+  statusHistory ReferenceStatusHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("references")
+}
+
+model ReferenceStatusHistory {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  status      String
+  comment     String?  @db.Text
+  
+  reference   Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  referenceId Int
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("reference_status_history")
+}
+
+model OneToOne {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  
+  // Member relationships
+  requesterId Int
+  requestedId Int
+  requester   Member @relation(name: "RequestedOneToOnes", fields: [requesterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  requested   Member @relation(name: "ReceivedOneToOnes", fields: [requestedId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Chapter relationship
+  chapterId   Int
+  chapter     Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  remarks     String? @db.Text
+  status      String  @default("pending") // pending, accepted, completed, cancelled
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("one_to_ones")
 }

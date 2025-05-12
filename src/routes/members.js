@@ -149,6 +149,74 @@ const memberController = require("../controllers/memberController");
 
 /**
  * @swagger
+ * /api/members/search:
+ *   get:
+ *     summary: Search members with more flexible criteria
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for member name, email, organization, or skills
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: businessCategory
+ *         schema:
+ *           type: string
+ *         description: Filter by business category
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Sort order direction
+ *     responses:
+ *       200:
+ *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 members:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Member'
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ */
+router.get("/search", auth, memberController.searchMembers);
+
+/**
+ * @swagger
  * /api/members:
  *   get:
  *     summary: List all members
@@ -597,5 +665,34 @@ router.get("/:id/membership-status", auth, memberController.getMembershipStatus)
  *         description: Member not found
  */
 router.patch("/:id/user-status", auth, memberController.toggleUserStatus);
+
+/**
+ * @swagger
+ * /api/members/{id}/reference-details:
+ *   get:
+ *     summary: Get member details for reference autofill
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Member ID
+ *     responses:
+ *       200:
+ *         description: Member details retrieved successfully
+ *       404:
+ *         description: Member not found
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  "/:id/reference-details",
+  auth,
+  memberController.getMemberDetailsForReference
+);
 
 module.exports = router;

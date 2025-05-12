@@ -1077,6 +1077,141 @@ const getMembershipStatus = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * GET /api/members/:id/reference-details
+ * Get member info specifically formatted for reference autofill
+ */
+const getMemberDetailsForReference = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  if (!id || isNaN(parseInt(id, 10))) {
+    throw createError(400, "Valid member ID is required");
+  }
+  
+  const memberId = parseInt(id, 10);
+  
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      id: true,
+      memberName: true,
+      email: true,
+      mobile1: true,
+      mobile2: true,
+      addressLine1: true,
+      addressLine2: true,
+      location: true,
+      pincode: true,
+      organizationName: true,
+      orgAddressLine1: true,
+      orgAddressLine2: true,
+      orgLocation: true,
+      orgPincode: true,
+    }
+  });
+  
+  if (!member) {
+    throw createError(404, "Member not found");
+  }
+  
+  res.json({ member });
+});
+
+/**
+ * Search members with more flexible search criteria
+ * This is used by the frontend member search component
+ */
+const searchMembers = async (req, res, next) => {
+  try {
+    let {
+      page = 1,
+      limit = 20,
+      search = "",
+      category,
+      businessCategory,
+      sortBy = "memberName",
+      sortOrder = "asc",
+    } = req.query;
+
+    // Parse pagination parameters
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    const skip = (page - 1) * limit;
+
+    // Build where conditions
+    const where = { active: true };
+    
+    // Add category filter if provided
+    if (category) {
+      where.category = category;
+    }
+    
+    // Add business category filter if provided
+    if (businessCategory) {
+      where.businessCategory = businessCategory;
+    }
+    
+    // Add search filter if provided
+    if (search) {
+      where.OR = [
+        { memberName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { organizationName: { contains: search, mode: "insensitive" } },
+        { businessCategory: { contains: search, mode: "insensitive" } },
+        { specificGive: { contains: search, mode: "insensitive" } },
+        { specificAsk: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // Get total count for pagination
+    const total = await prisma.member.count({ where });
+
+    // Execute query with pagination and sorting
+    const members = await prisma.member.findMany({
+      where,
+      select: {
+        id: true,
+        memberName: true,
+        email: true,
+        mobile1: true,
+        mobile2: true,
+        profilePicture1: true,
+        profilePicture2: true,
+        profilePicture3: true,
+        category: true,
+        businessCategory: true,
+        organizationName: true,
+        businessTagline: true,
+        organizationWebsite: true,
+        organizationDescription: true,
+        specificGive: true,
+        specificAsk: true,
+        createdAt: true,
+        user: {
+          select: {
+            lastLogin: true
+          }
+        }
+      },
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+    });
+
+    // Return paginated results
+    return res.json({
+      members,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error("Error in searchMembers:", error);
+    return next(createError(500, "Server error during member search"));
+  }
+};
+
 module.exports = {
   getMembers, // Make sure this is defined or imported
   createMember,
@@ -1087,5 +1222,7 @@ module.exports = {
   deleteProfilePicture, // Make sure this is defined or imported
   getProfilePicture, // Make sure this is defined or imported
   getMembershipStatus, // New function to check membership status
-  toggleUserStatus // Function to toggle user's active status only
+  toggleUserStatus, // Function to toggle user's active status only
+  getMemberDetailsForReference,
+  searchMembers,
 };

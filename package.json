@@ -5,11 +5,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "seed": "node prisma/seed.js",
     "dev": "nodemon server.js",
     "migrate": "npx prisma migrate dev",
     "generate": "npx prisma generate",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",

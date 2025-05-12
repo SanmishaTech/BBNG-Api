@@ -246,6 +246,9 @@ const createMembership = asyncHandler(async (req, res) => {
     data: updateData,
   });
 
+  // Update the user's active status
+  await updateUserActiveStatus(req.body.memberId);
+
   res.status(201).json(membership);
 });
 
@@ -368,10 +371,84 @@ const updateMembership = asyncHandler(async (req, res) => {
     };
   }
 
+  // Get the updated membership with package details to update expiry dates
+  const membership = await prisma.membership.findUnique({
+    where: { id },
+    include: { package: true },
+  });
+
+  // Update member expiry dates if active status has changed
+  if (req.body.active !== undefined) {
+    // Get member details
+    const member = await prisma.member.findUnique({
+      where: { id: existingMembership.memberId },
+    });
+
+    const updateData = {};
+    
+    // If membership was deactivated, update expiry dates
+    if (req.body.active === false) {
+      // Find the most recent active membership for this member and package type
+      const mostRecentMembership = await prisma.membership.findFirst({
+        where: {
+          memberId: existingMembership.memberId,
+          id: { not: id },
+          package: { isVenueFee: membership.package.isVenueFee },
+          active: true,
+        },
+        orderBy: { packageEndDate: 'desc' },
+        include: { package: true },
+      });
+
+      // Update the appropriate expiry date field
+      if (membership.package.isVenueFee) {
+        // If the deactivated membership's end date matches the member's current venue expiry,
+        // update it to the next most recent active membership's end date or null
+        if (member.venueExpiryDate && 
+            new Date(member.venueExpiryDate).getTime() === new Date(membership.packageEndDate).getTime()) {
+          updateData.venueExpiryDate = mostRecentMembership ? mostRecentMembership.packageEndDate : null;
+        }
+      } else {
+        // Same for HO expiry
+        if (member.hoExpiryDate && 
+            new Date(member.hoExpiryDate).getTime() === new Date(membership.packageEndDate).getTime()) {
+          updateData.hoExpiryDate = mostRecentMembership ? mostRecentMembership.packageEndDate : null;
+        }
+      }
+    } 
+    // If membership was activated, update expiry dates
+    else if (req.body.active === true) {
+      // Get current expiry date
+      const currentExpiryDate = membership.package.isVenueFee 
+        ? member.venueExpiryDate 
+        : member.hoExpiryDate;
+
+      // Update expiry date if the newly activated membership ends later than current expiry
+      if (!currentExpiryDate || new Date(membership.packageEndDate) > new Date(currentExpiryDate)) {
+        if (membership.package.isVenueFee) {
+          updateData.venueExpiryDate = membership.packageEndDate;
+        } else {
+          updateData.hoExpiryDate = membership.packageEndDate;
+        }
+      }
+    }
+
+    // Update member if there are changes to expiry dates
+    if (Object.keys(updateData).length > 0) {
+      await prisma.member.update({
+        where: { id: existingMembership.memberId },
+        data: updateData,
+      });
+    }
+  }
+
   const updated = await prisma.membership.update({
     where: { id },
     data: membershipData,
   });
+
+  // Update the user's active status
+  await updateUserActiveStatus(existingMembership.memberId);
 
   res.json(updated);
 });
@@ -455,6 +532,9 @@ const deleteMembership = asyncHandler(async (req, res) => {
     }),
   ]);
 
+  // Update the user's active status
+  await updateUserActiveStatus(membership.memberId);
+
   res.json({ message: "Membership deleted successfully" });
 });
 
@@ -485,6 +565,53 @@ const getMembershipsByMemberId = asyncHandler(async (req, res) => {
   res.json(memberships);
 });
 
+/**
+ * Helper function to update a user's active status based on membership status
+ * Sets user as active if either venue or HO membership is active (expiry date in the future)
+ */
+const updateUserActiveStatus = async (memberId) => {
+  try {
+    // Get the member with their user relationship
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      include: { users: true }
+    });
+
+    if (!member || !member.users) {
+      console.log(`No user found for member ID ${memberId}`);
+      return;
+    }
+
+    const now = new Date();
+    let hasActiveMembership = false;
+    
+    // A user is active ONLY if BOTH venue and HO memberships are set AND at least one is active
+    // If any membership is null, user should be inactive
+    
+    // Check if both memberships exist (not null)
+    if (member.venueExpiryDate && member.hoExpiryDate) {
+      // Check if at least one membership is active
+      if (new Date(member.venueExpiryDate) > now || new Date(member.hoExpiryDate) > now) {
+        hasActiveMembership = true;
+      }
+    } else {
+      // If any membership is null, user should be inactive
+      hasActiveMembership = false;
+    }
+
+    // Update user's active status if it differs from current membership status
+    if (member.users.active !== hasActiveMembership) {
+      console.log(`Updating user ID ${member.users.id} active status to ${hasActiveMembership}`);
+      await prisma.user.update({
+        where: { id: member.users.id },
+        data: { active: hasActiveMembership }
+      });
+    }
+  } catch (error) {
+    console.error('Error updating user active status:', error);
+  }
+};
+
 module.exports = {
   getMemberships,
   createMembership,
@@ -492,4 +619,4 @@ module.exports = {
   updateMembership,
   deleteMembership,
   getMembershipsByMemberId,
-}; 
+};
