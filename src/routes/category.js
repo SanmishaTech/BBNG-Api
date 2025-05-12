@@ -134,10 +134,10 @@ router.get("/:id", auth, categoryController.getCategoryById);
  *             type: object
  *             required: [name, description]
  *             properties:
- *               name: 
+ *               name:
  *                 type: string
  *                 description: Category name
- *               description: 
+ *               description:
  *                 type: string
  *                 description: Category description
  *     responses:
@@ -170,10 +170,10 @@ router.post("/", auth, categoryController.createCategory);
  *           schema:
  *             type: object
  *             properties:
- *               name: 
+ *               name:
  *                 type: string
  *                 description: Category name
- *               description: 
+ *               description:
  *                 type: string
  *                 description: Category description
  *     responses:
