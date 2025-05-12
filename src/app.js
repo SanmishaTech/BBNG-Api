@@ -30,10 +30,8 @@ const membershipReportRoutes = require("./routes/membershipReports");
 
 const swaggerRouter = require("./swagger");
  const referenceRoutes = require("./routes/referenceRoutes");
-const membershipReportRoutes = require("./routes/membershipReports");
- 
- const swaggerRouter = require("./swagger");
- 
+  
+   
 const path = require("path");
 const config = require("./config/config");
 const app = express();
@@ -107,16 +105,11 @@ app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transact
  app.use("/api/requirements", requirementRoutes); // Add routes for requirements
 app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
 app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
-app.use("/api/references", referenceRoutes);
-app.use("/api/one-to-ones", oneToOneRoutes); // Add route for member search
+ app.use("/api/one-to-ones", oneToOneRoutes); // Add route for member search
 
 app.use(swaggerRouter); // Add this line to include Swagger documentation
   
- app.use("/api/requirements", requirementRoutes); // Add routes for requirements
-app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
-app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
- app.use("/api/references", referenceRoutes);
- app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
+  app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
 
  app.use(swaggerRouter); // Add this line to include Swagger documentation
  
