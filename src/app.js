@@ -97,8 +97,8 @@ app.use("/api/transactionreports", transactionReportRoutes); // Add route for tr
 // Catch-all route to serve index.html for client-side routing (must be after all API routes)
 app.get("*", (req, res) => {
   const indexPath = process.env.NODE_ENV === 'production'
-    ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/frontend/dist', 'index.html')
-    : path.resolve(__dirname, "../../frontend/dist/index.html");
+    ? path.join(process.env.FRONTEND_PATH || '/opt/bitnami/apache/htdocs/BBNG/BBNG-FrontEnd/dist', 'index.html')
+    : path.resolve(__dirname, "../../BBNG-FrontEnd/dist/index.html");
   
   console.log(`Serving index.html from: ${indexPath}`);
   res.sendFile(indexPath);
