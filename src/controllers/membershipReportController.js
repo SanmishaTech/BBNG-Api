@@ -20,7 +20,7 @@ const exportMembers = async (req, res, next) => {
     const { fromDate, toDate, packageId, memberId, active, chapterId } = req.query;
     
     // Build where clause for filtering members
-    const whereClause = {};
+    let whereClause = {};
     
     // Add member filter if provided
     if (memberId) {
@@ -32,24 +32,78 @@ const exportMembers = async (req, res, next) => {
       whereClause.chapterId = parseInt(chapterId);
     }
     
-    // Build membership filter for related memberships
-    const membershipFilter = {};
-    
-    // Add date filtering for memberships if provided
+    // Apply date filtering on member expiry dates if provided
     if (fromDate || toDate) {
-      membershipFilter.invoiceDate = {};
-      
-      if (fromDate) {
-        membershipFilter.invoiceDate.gte = new Date(fromDate);
-      }
+      // Convert dates
+      const fromDateObj = fromDate ? new Date(fromDate) : null;
+      let toDateObj = null;
       
       if (toDate) {
         // Set time to end of day for toDate
-        const endDate = new Date(toDate);
-        endDate.setHours(23, 59, 59, 999);
-        membershipFilter.invoiceDate.lte = endDate;
+        toDateObj = new Date(toDate);
+        toDateObj.setHours(23, 59, 59, 999);
       }
+      
+      // Build complex date filter according to the requirements
+      const dateConditions = [];
+      
+      // Condition 1: hoExpiryDate is between fromDate and toDate
+      if (fromDate && toDate) {
+        dateConditions.push({
+          hoExpiryDate: {
+            gte: fromDateObj,
+            lte: toDateObj
+          }
+        });
+      } else if (fromDate) {
+        dateConditions.push({
+          hoExpiryDate: {
+            gte: fromDateObj
+          }
+        });
+      } else if (toDate) {
+        dateConditions.push({
+          hoExpiryDate: {
+            lte: toDateObj
+          }
+        });
+      }
+      
+      // Condition 2: venueExpiryDate is between fromDate and toDate
+      if (fromDate && toDate) {
+        dateConditions.push({
+          venueExpiryDate: {
+            gte: fromDateObj,
+            lte: toDateObj
+          }
+        });
+      } else if (fromDate) {
+        dateConditions.push({
+          venueExpiryDate: {
+            gte: fromDateObj
+          }
+        });
+      } else if (toDate) {
+        dateConditions.push({
+          venueExpiryDate: {
+            lte: toDateObj
+          }
+        });
+      }
+      
+      // Condition 3: Either hoExpiryDate or venueExpiryDate is null
+      dateConditions.push({ hoExpiryDate: null });
+      dateConditions.push({ venueExpiryDate: null });
+      
+      // Add the OR conditions to the where clause
+      whereClause = {
+        ...whereClause,
+        OR: dateConditions
+      };
     }
+    
+    // Build membership filter for related memberships
+    const membershipFilter = {};
     
     // Add package filter for memberships if provided
     if (packageId) {
@@ -80,6 +134,9 @@ const exportMembers = async (req, res, next) => {
       }
     }
 
+    // Log the constructed query for debugging (remove in production)
+    console.log('Member filter query:', JSON.stringify(whereClause, null, 2));
+    
     // Fetch members with required fields and filters
     const members = await prisma.member.findMany({
       where: whereClause,
@@ -95,6 +152,8 @@ const exportMembers = async (req, res, next) => {
       },
       orderBy: { memberName: "asc" },
     });
+    
+    console.log(`Found ${members.length} members matching the criteria`);
 
     // Create workbook & worksheet
     const workbook = new ExcelJS.Workbook();
