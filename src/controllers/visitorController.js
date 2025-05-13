@@ -530,9 +530,9 @@ const updateVisitor = asyncHandler(async (req, res) => {
   }
 
   // For non-cross-chapter visitors, use the meeting's chapter
-  if (updateData.isCrossChapter === false && existingVisitor?.meeting) {
-    updateData.chapterId = existingVisitor.meeting.chapterId;
-    updateData.chapter = existingVisitor.meeting.chapter?.name || "";
+  if (updateData.isCrossChapter === false && existing?.meeting) {
+    updateData.chapterId = existing.meeting.chapterId;
+    updateData.chapter = existing.meeting.chapter?.name || "";
   }
 
   const updated = await prisma.visitor.update({

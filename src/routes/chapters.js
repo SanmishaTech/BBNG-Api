@@ -382,4 +382,23 @@ router.put("/:id", auth, chapterController.updateChapter);
  */
 router.delete("/:id", auth, chapterController.deleteChapter);
 
+/**
+ * Chapter Role Management Routes
+ */
+
+// Get all roles for a chapter
+router.get("/:chapterId/roles", auth, chapterController.getChapterRoles);
+
+// Assign a role to a member
+router.post("/:chapterId/roles", auth, chapterController.assignChapterRole);
+
+// Remove a role assignment
+router.delete("/:chapterId/roles/:roleId", auth, chapterController.removeChapterRole);
+
+// Get role assignment history for a chapter
+router.get("/:chapterId/roles/history", auth, chapterController.getChapterRoleHistory);
+
+// Get roles for a specific member (moved to chapter routes for consistency)
+router.get("/members/:memberId/roles", auth, chapterController.getMemberRoles);
+
 module.exports = router;
