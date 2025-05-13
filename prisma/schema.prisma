@@ -117,6 +117,7 @@ model Chapter {
   references   Reference[] // Added relation to Reference model
   oneToOnes    OneToOne[] // Relation to OneToOne model
   chapterRoles ChapterRole[] // Relation to chapter roles
+  thankYouSlips ThankYouSlip[] // Relation to thank you slips
 
   @@map("chapters")
 }
@@ -320,7 +321,7 @@ model MeetingAttendance {
   member   Member @relation(fields: [memberId], references: [id])
   memberId Int
 
-  isPresent Boolean @default(true)
+  isPresent Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -403,6 +404,9 @@ model Reference {
 
   // Status history
   statusHistory ReferenceStatusHistory[]
+  
+  // Thank you slips
+  thankYouSlips ThankYouSlip[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -496,4 +500,28 @@ model ChapterRoleHistory {
   endDate   DateTime? // When this record was replaced (null if current)
   
   @@map("chapter_role_history")
+}
+
+model ThankYouSlip {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  
+  // Reference relationship
+  referenceId Int
+  reference   Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Chapter relationship
+  chapterId   Int
+  chapter     Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Details
+  toWhom      String
+  amount      String
+  narration   String   @db.Text
+  testimony   String   @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("thank_you_slips")
 }
