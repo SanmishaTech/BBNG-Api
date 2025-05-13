@@ -399,6 +399,7 @@ const getMembers = asyncHandler(async (req, res) => {
   const sortOrder =
     req.query.sortOrder?.toLowerCase() === "desc" ? "desc" : "asc";
   const active = req.query.active;
+  const chapterId = req.query.chapterId ? parseInt(req.query.chapterId) : null;
 
   // Build where clause for filtering
   const where = {};
@@ -415,6 +416,11 @@ const getMembers = asyncHandler(async (req, res) => {
     where.active = true;
   } else if (active === "false") {
     where.active = false;
+  }
+  
+  // Filter by chapter if chapterId is provided
+  if (chapterId) {
+    where.chapterId = chapterId;
   }
 
   try {
