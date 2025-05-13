@@ -32,6 +32,7 @@ const subCategoryRoutes = require("./routes/subCategory");
 
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
+const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
 
 const path = require("path");
 const config = require("./config/config");
@@ -113,6 +114,7 @@ app.use("/api/transactionreports", transactionReportRoutes); // Add route for tr
 
 app.use("/api/references", referenceRoutes); 
 app.use("/api/one-to-ones", oneToOneRoutes); // Add route for one-to-one meetings
+app.use("/api/thankyou-slips", thankYouSlipRoutes); // Add routes for thank you slips
 app.use("/api", chapterRoleRoutes); // Add routes for chapter role management
 app.use(swaggerRouter); // Add this line to include Swagger documentation
   
