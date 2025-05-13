@@ -378,10 +378,10 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
 
     // Define Zod schema for status update validation
     const schema = z.object({
-      status: z.enum(["pending", "contacted", "converted", "rejected"], {
+      status: z.enum(["pending", "contacted", "converted", "rejected", "business done"], {
         errorMap: () => ({
           message:
-            "Status must be one of: pending, contacted, converted, rejected",
+            "Status must be one of: pending, contacted, business done, rejected",
         }),
       }),
       date: z.string().optional(),
@@ -418,7 +418,7 @@ const updateReferenceStatus = asyncHandler(async (req, res, next) => {
           date: validatedData.date ? new Date(validatedData.date) : new Date(),
           status: validatedData.status,
           comment: validatedData.comment || null,
-          userId: req.user.id, // Record which user made the status change
+          // userId field doesn't exist in the ReferenceStatusHistory model
         },
       });
 

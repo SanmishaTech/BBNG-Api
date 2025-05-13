@@ -224,8 +224,8 @@ const createMember = asyncHandler(async (req, res) => {
       });
 
       // Convert dateOfBirth string to Date object
-      const dateOfBirth = new Date(dateOfBirth);
-      if (isNaN(dateOfBirth.getTime())) {
+      const dateOfBirthObj = new Date(dateOfBirth);
+      if (isNaN(dateOfBirthObj.getTime())) {
         // This should ideally be caught by Zod, but double-check
         throw createError(
           400,
@@ -238,7 +238,7 @@ const createMember = asyncHandler(async (req, res) => {
         ...otherValidatedData,
         email: email, // Member's email (unique, same as User's)
         password: hashedPassword, // Store hashed password in Member as per schema
-        dateOfBirth: dateOfBirth,
+        dateOfBirth: dateOfBirthObj,
         active: true, // Explicitly set active to true (despite schema default)
         // Establish the relationship to the User using proper Prisma relation syntax
         users: {
@@ -1226,7 +1226,7 @@ const searchMembers = async (req, res, next) => {
         specificGive: true,
         specificAsk: true,
         createdAt: true,
-        user: {
+        users: {
           select: {
             lastLogin: true,
           },
