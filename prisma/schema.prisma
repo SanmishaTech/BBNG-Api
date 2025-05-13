@@ -56,8 +56,20 @@ model Category {
   description String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+  subCategory subCategory[]
 
   @@map("category")
+}
+
+model subCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+
+  @@map("subCategory")
 }
 
 model SiteSetting {
