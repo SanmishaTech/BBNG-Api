@@ -27,7 +27,8 @@ const memberReportRoutes = require("./routes/memberReports");
 const membershipReportRoutes = require("./routes/membershipReports");
 const transactionReportRoutes = require("./routes/transactionReports");
 const oneToOneRoutes = require("./routes/oneToOneRoutes");
- 
+const chapterRoleRoutes = require("./routes/chapterRoles");
+
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
 
@@ -110,7 +111,8 @@ app.use("/api/transactionreports", transactionReportRoutes); // Add route for tr
   app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
 
 app.use("/api/references", referenceRoutes); 
-app.use("/api/one-to-ones", oneToOneRoutes); // Add route for member search
+app.use("/api/one-to-ones", oneToOneRoutes); // Add route for one-to-one meetings
+app.use("/api", chapterRoleRoutes); // Add routes for chapter role management
 app.use(swaggerRouter); // Add this line to include Swagger documentation
   
  

@@ -145,7 +145,7 @@ const createMember = asyncHandler(async (req, res) => {
 
   // If validateRequest returns validation errors (an object of field errors), return them
   const fieldErrors = Object.entries(parsedData).filter(
-    ([, v]) => v && typeof v === 'object' && v.type === 'validation'
+    ([, v]) => v && typeof v === "object" && v.type === "validation"
   );
   if (fieldErrors.length > 0) {
     const errors = Object.fromEntries(fieldErrors);

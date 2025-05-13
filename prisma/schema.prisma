@@ -116,6 +116,7 @@ model Chapter {
   transactions Transaction[] // Added relation to Transaction model
   references   Reference[] // Added relation to Reference model
   oneToOnes    OneToOne[] // Relation to OneToOne model
+  chapterRoles ChapterRole[] // Relation to chapter roles
 
   @@map("chapters")
 }
@@ -125,6 +126,7 @@ model Member {
   memberName              String
   chapterId               Int?
   chapter                 Chapter? @relation(fields: [chapterId], references: [id])
+  chapterRoles           ChapterRole[]  // Relation to assigned chapter roles
   category                String
   businessCategory        String
   gender                  String
@@ -445,3 +447,53 @@ model OneToOne {
 
   @@map("one_to_ones")
  }
+
+model ChapterRole {
+  id        Int      @id @default(autoincrement())
+  roleType  String   // 'chapterHead', 'secretary', 'treasurer', 'guardian', 'districtCoordinator', 'regionalCoordinator'
+  
+  // Member relationship
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Chapter relationship
+  chapterId Int
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // History relationship
+  history   ChapterRoleHistory[] // Relation to role history
+  
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([chapterId, roleType])
+  @@map("chapter_roles")
+}
+
+model ChapterRoleHistory {
+  id        Int      @id @default(autoincrement())
+  
+  // Related role
+  roleId    Int
+  role      ChapterRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Member who held the role
+  memberId  Int
+  
+  // Action performed (assigned, removed)
+  action    String
+  
+  // User who made the change
+  performedById Int? // ID of the user who made the change
+  performedByName String? // Name of the user who made the change (in case user record is deleted)
+  
+  // Chapter information for easier querying
+  chapterId Int
+  roleType  String
+  
+  // Timestamps
+  startDate DateTime @default(now()) // When this record became active
+  endDate   DateTime? // When this record was replaced (null if current)
+  
+  @@map("chapter_role_history")
+}
