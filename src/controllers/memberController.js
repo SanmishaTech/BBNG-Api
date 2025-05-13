@@ -65,7 +65,7 @@ const memberSchema = z.object({
   gender: z.enum(["male", "female", "other"], {
     errorMap: () => ({ message: "Gender must be male, female, or other" }),
   }),
-  dob: z
+  dateOfBirth: z
     .string()
     .refine(
       (val) => !isNaN(new Date(val).getTime()),
@@ -155,7 +155,7 @@ const createMember = asyncHandler(async (req, res) => {
   const {
     // verifyPassword, // Removed if not in schema, handle password confirmation if needed
     password,
-    dob,
+    dateOfBirth,
     email,
     chapterId, // chapterId is now correctly parsed as number if it was string
     ...otherValidatedData
@@ -223,8 +223,8 @@ const createMember = asyncHandler(async (req, res) => {
         },
       });
 
-      // Convert dob string to Date object
-      const dateOfBirth = new Date(dob);
+      // Convert dateOfBirth string to Date object
+      const dateOfBirth = new Date(dateOfBirth);
       if (isNaN(dateOfBirth.getTime())) {
         // This should ideally be caught by Zod, but double-check
         throw createError(
@@ -707,14 +707,14 @@ const updateMember = asyncHandler(async (req, res) => {
     // Handle request body
     const body = { ...req.body };
 
-    // Convert dob to dateOfBirth if it exists
-    if (body.dob) {
-      const dateOfBirth = new Date(body.dob);
+    // Convert dateOfBirth to dateOfBirth if it exists
+    if (body.dateOfBirth) {
+      const dateOfBirth = new Date(body.dateOfBirth);
       if (isNaN(dateOfBirth.getTime())) {
         throw createError(400, "Invalid date format for date of birth");
       }
       body.dateOfBirth = dateOfBirth;
-      delete body.dob; // Remove dob as we're using dateOfBirth
+      delete body.dateOfBirth; // Remove dateOfBirth as we're using dateOfBirth
     }
 
     if (typeof body.businessCategory === "number") {
