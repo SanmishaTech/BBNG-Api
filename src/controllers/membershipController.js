@@ -41,6 +41,46 @@ const asyncHandler = (fn) => (req, res, next) => {
   });
 };
 
+/**
+ * Generate a financial year code based on a date
+ * Returns string like "FY23-24" for dates in financial year 2023-2024
+ */
+const getFinancialYearCode = (date = new Date()) => {
+  const currentMonth = date.getMonth(); // 0-11
+  const currentYear = date.getFullYear();
+  
+  // In India, financial year runs from April 1 to March 31
+  // If current month is January to March, financial year started in previous calendar year
+  const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+  const fyEndYear = fyStartYear + 1;
+  
+  // Return FY format like "FY23-24" (last two digits of each year)
+  return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
+};
+
+/**
+ * Generate a unique invoice number based on financial year
+ * Format: FY23-24/001 (financial year + sequential number)
+ */
+const generateInvoiceNumber = async (invoiceDate) => {
+  const financialYear = getFinancialYearCode(invoiceDate);
+  
+  // Get count of existing invoices for this financial year
+  const invoiceCount = await prisma.membership.count({
+    where: {
+      invoiceNumber: {
+        startsWith: financialYear
+      }
+    }
+  });
+  
+  // Create sequential number padded with leading zeros (001, 002, etc.)
+  const sequentialNumber = (invoiceCount + 1).toString().padStart(3, '0');
+  
+  // Final invoice number format: FY23-24/001
+  return `${financialYear}-${sequentialNumber}`;
+};
+
 /** GET /api/memberships
  * List memberships (pagination, filters, sort)
  */
@@ -106,7 +146,6 @@ const createMembership = asyncHandler(async (req, res) => {
   const schema = z
     .object({
       memberId: z.number().int().positive("Member ID is required"),
-      invoiceNumber: z.string().min(1, "Invoice number is required").max(255),
       invoiceDate: z.preprocess(
         (v) => new Date(v),
         z.date({ required_error: "Invoice date is required" })
@@ -148,18 +187,6 @@ const createMembership = asyncHandler(async (req, res) => {
         });
         return;
       }
-      
-      // Check if invoice number is unique
-      const invoiceExists = await prisma.membership.findUnique({
-        where: { invoiceNumber: data.invoiceNumber },
-      });
-      if (invoiceExists) {
-        ctx.addIssue({
-          path: ["invoiceNumber"],
-          message: "Invoice number already exists",
-          code: z.ZodIssueCode.custom,
-        });
-      }
     });
 
   const valid = await validateRequest(schema, req.body, res);
@@ -174,6 +201,9 @@ const createMembership = asyncHandler(async (req, res) => {
   const member = await prisma.member.findUnique({
     where: { id: req.body.memberId },
   });
+
+  // Generate unique invoice number based on financial year
+  const invoiceNumber = await generateInvoiceNumber(new Date(req.body.invoiceDate));
 
   // Determine package start and end dates
   let packageStartDate = new Date();
@@ -217,6 +247,7 @@ const createMembership = asyncHandler(async (req, res) => {
   // Prepare data for creating membership
   const membershipData = {
     ...req.body,
+    invoiceNumber,
     packageStartDate,
     packageEndDate,
     cgstAmount,
@@ -224,8 +255,6 @@ const createMembership = asyncHandler(async (req, res) => {
     igstAmount,
     totalFees,
   };
-
- 
 
   // Create membership record
   const membership = await prisma.membership.create({

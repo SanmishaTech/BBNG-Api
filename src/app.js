@@ -28,6 +28,7 @@ const membershipReportRoutes = require("./routes/membershipReports");
 const transactionReportRoutes = require("./routes/transactionReports");
 const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const chapterRoleRoutes = require("./routes/chapterRoles");
+const subCategoryRoutes = require("./routes/subCategory");
 
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
@@ -109,7 +110,7 @@ app.use("/api/memberreports", memberReportRoutes); // Add route for member expor
 app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
 app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
  
-  app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
+  app.use("/api/subcategories", subCategoryRoutes); // Add route for subcategories
 
 app.use("/api/references", referenceRoutes); 
 app.use("/api/one-to-ones", oneToOneRoutes); // Add route for one-to-one meetings
