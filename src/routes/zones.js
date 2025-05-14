@@ -261,4 +261,152 @@ router.get("/:id", auth, zoneController.getZoneById);
 router.put("/:id", auth, zoneController.updateZone);
 router.delete("/:id", auth, zoneController.deleteZone);
 
+/**
+ * @swagger
+ * /zones/{zoneId}/chapters:
+ *   get:
+ *     summary: Retrieve chapters for a specific zone
+ *     tags: [Zones]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: zoneId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Numeric ID of the zone to retrieve chapters for
+ *     responses:
+ *       200:
+ *         description: A list of chapters for the specified zone
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 chapters:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                   example:
+ *                     - id: 1
+ *                       name: "Chapter Alpha"
+ *                     - id: 2
+ *                       name: "Chapter Beta"
+ *       400:
+ *         description: Invalid Zone ID provided
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *       403:
+ *         description: Forbidden - User does not have permission ('zones.read')
+ *       404:
+ *         description: Not Found - Zone with the specified ID does not exist
+ *       500:
+ *         description: Internal Server Error
+ */
+router.get(
+  "/:zoneId/chapters",
+  auth,
+   zoneController.getChaptersByZone
+);
+
+/**
+ * @swagger
+ * /zones/{zoneId}/roles:
+ *   get:
+ *     summary: Get all roles for a specific zone
+ *     tags: [Zones]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: zoneId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the zone
+ *     responses:
+ *       200:
+ *         description: A list of zone roles
+ *       400:
+ *         description: Invalid Zone ID
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/:zoneId/roles", auth, zoneController.getZoneRoles);
+
+/**
+ * @swagger
+ * /zones/{zoneId}/roles:
+ *   post:
+ *     summary: Assign a role to a member in a zone
+ *     tags: [Zones]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: zoneId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the zone
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberId
+ *               - roleType
+ *             properties:
+ *               memberId:
+ *                 type: integer
+ *               roleType:
+ *                 type: string
+ *                 enum: ["Regional Director", "Joint Secretary"]
+ *     responses:
+ *       201:
+ *         description: Zone role assigned successfully
+ *       400:
+ *         description: Invalid input (Zone ID, Member ID, or RoleType)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Zone or Member not found
+ */
+router.post("/:zoneId/roles", auth, zoneController.assignZoneRole);
+
+/**
+ * @swagger
+ * /zones/roles/{assignmentId}:
+ *   delete:
+ *     summary: Remove a zone role assignment
+ *     tags: [Zones]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: assignmentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the zone role assignment to remove
+ *     responses:
+ *       200:
+ *         description: Zone role removed successfully
+ *       400:
+ *         description: Invalid Assignment ID
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Zone role assignment not found
+ */
+router.delete("/roles/:assignmentId", auth, zoneController.removeZoneRole);
+
 module.exports = router;
