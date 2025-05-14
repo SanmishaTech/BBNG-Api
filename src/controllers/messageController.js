@@ -98,7 +98,8 @@ const createMessage = async (req, res, next) => {
       .max(100, "Power team must not exceed 100 characters"),
     message: z.string()
       .min(1, "Message cannot be empty")
-      .max(5000, "Message must not exceed 5000 characters")
+      .max(5000, "Message must not exceed 5000 characters"),
+    chapterId: z.string().optional().transform(val => val ? parseInt(val) : null)
   });
 
   // Validate the request body using Zod
@@ -125,11 +126,22 @@ const createMessage = async (req, res, next) => {
   }
 
   try {
+    // Parse chapterId - handle both number and "null" string value
+    let chapterId = null;
+    if (req.body.chapterId && req.body.chapterId !== "null") {
+      chapterId = parseInt(req.body.chapterId);
+      // If parsing fails, set to null
+      if (isNaN(chapterId)) {
+        chapterId = null;
+      }
+    }
+
     const newMessage = await prisma.message.create({
       data: {
         heading: req.body.heading,
         powerteam: req.body.powerteam,
         message: req.body.message,
+        chapterId: chapterId,
         attachment: uploadedFile ? JSON.stringify(uploadedFile) : null
       }
     });
