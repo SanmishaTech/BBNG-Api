@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const cors = require("cors");
 const createError = require("http-errors");
+const path = require("path");
 require("dotenv").config();
 const roleRoutes = require("./routes/roles");
 const userRoutes = require("./routes/users");
@@ -28,64 +29,62 @@ const membershipReportRoutes = require("./routes/membershipReports");
 const transactionReportRoutes = require("./routes/transactionReports");
 const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const chapterRoleRoutes = require("./routes/chapterRoles");
+<<<<<<< HEAD
 const subCategoryRoutes = require("./routes/subCategory");
 const statisticsRoutes = require('./routes/statistics');
 
+=======
+>>>>>>> 6ac8a9c (asd)
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
 const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
 
-const path = require("path");
-const config = require("./config/config");
 const app = express();
+
 app.use(morgan("dev"));
+
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource loading
-    crossOriginOpenerPolicy: false, // Disable COOP header since we're on HTTP
-    contentSecurityPolicy: false, // Disable CSP for HTTP deployment
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
   })
 );
+
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = allowedOriginsEnv ? allowedOriginsEnv.split(',') : ['http://localhost:5173'];
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow requests from this origin
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
+
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // For application/x-www-form-urlencoded (optional, but common)
+app.use(express.urlencoded({ extended: true }));
 
-// Determine the correct frontend path based on environment
-const frontendPath =
+const frontendDistPath =
   process.env.NODE_ENV === "production"
-    ? path.join(
-        process.env.FRONTEND_PATH ||
-          "/opt/bitnami/apache/htdocs/BBNG/frontend/dist"
-      )
-    : path.join(__dirname, "../../frontend/dist");
+    ? process.env.FRONTEND_PATH || path.resolve(__dirname, "..", "..", "frontend", "dist")
+    : path.resolve(__dirname, "..", "..", "frontend", "dist");
 
-console.log(`Serving frontend from: ${frontendPath}`);
-app.use(express.static(frontendPath));
+console.log(`Serving frontend static files from: ${frontendDistPath}`);
+app.use(express.static(frontendDistPath));
 
-// Define a route to serve backend/dist files directly if needed
-const backendDistPath =
-  process.env.NODE_ENV === "production"
-    ? path.join(
-        process.env.BACKEND_DIST_PATH ||
-          "/opt/bitnami/apache/htdocs/BBNG-Api/dist"
-      )
-    : path.join(__dirname, "../BBNG-Api/dist");
-
-app.use("/backend", express.static(backendDistPath));
-
-// Determine the correct uploads path based on environment
 const uploadsPath =
   process.env.NODE_ENV === "production"
-    ? process.env.UPLOADS_PATH || "/opt/bitnami/apache/htdocs/BBNG-Api/uploads"
-    : path.join(__dirname, "..", "uploads");
+    ? process.env.UPLOADS_PATH || path.resolve(__dirname, "..", "uploads")
+    : path.resolve(__dirname, "..", "uploads");
 
-console.log(`Serving static files from: ${uploadsPath}`); // Verify this path on startup!
+console.log(`Serving uploads from: ${uploadsPath}`);
 app.use("/uploads", express.static(uploadsPath));
 
 app.use("/api/auth", authRoutes);
@@ -95,52 +94,64 @@ app.use("/api/zones", zoneRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/trainings", trainingRoutes);
 app.use("/api/categories", categoryRoutes);
- 
-app.use("/api/sites", siteRoutes);  
- app.use("/api/messages", messageRoutes); // Add this line to include message routes
+app.use("/api/sites", siteRoutes);
+app.use("/api/messages", messageRoutes);
 app.use("/api/chapters", chapterRoutes);
-app.use("/api/chapter-meetings", chapterMeetingRoutes); // Add routes for chapter meetings
+app.use("/api/chapter-meetings", chapterMeetingRoutes);
 app.use("/api/members", memberRoutes);
-app.use("/api/packages", packageRoutes); // Add routes for packages
-app.use("/api/memberships", membershipRoutes); // Add routes for memberships
-app.use("/api/visitors", visitorRoutes); // Add routes for visitors
-app.use("/api/meeting-attendance", meetingAttendanceRoutes); // Add routes for meeting attendance
-app.use("/api/transactionRoutes", transactionRoutes); // Add routes for transactions
-app.use("/api/requirements", requirementRoutes); // Add routes for requirements
-app.use("/api/memberreports", memberReportRoutes); // Add route for member export reports
-app.use("/api/membershipreports", membershipReportRoutes); // Add route for membership export reports
-app.use("/api/transactionreports", transactionReportRoutes); // Add route for transaction export reports
- 
-  app.use("/api/subcategories", subCategoryRoutes); // Add route for subcategories
-
-app.use("/api/references", referenceRoutes); 
-app.use("/api/one-to-ones", oneToOneRoutes); // Add route for one-to-one meetings
-app.use("/api/thankyou-slips", thankYouSlipRoutes); // Add routes for thank you slips
-app.use("/api", chapterRoleRoutes); // Add routes for chapter role management
+app.use("/api/packages", packageRoutes);
+app.use("/api/memberships", membershipRoutes);
+app.use("/api/visitors", visitorRoutes);
+app.use("/api/meeting-attendance", meetingAttendanceRoutes);
+app.use("/api/transactionRoutes", transactionRoutes);
+app.use("/api/requirements", requirementRoutes);
 app.use("/api/statistics", statisticsRoutes);
-app.use(swaggerRouter); // Add this line to include Swagger documentation
-  
- 
-  app.use(swaggerRouter); // Add this line to include Swagger documentation
- 
- // Catch-all route to serve index.html for client-side routing (must be after all API routes)
-app.get("*", (req, res) => {
-  const indexPath =
-    process.env.NODE_ENV === "production"
-      ? path.join(
-          process.env.FRONTEND_PATH ||
-            "/opt/bitnami/apache/htdocs/BBNG/frontend/dist",
-          "index.html"
-        )
-      : path.resolve(__dirname, "../../frontend/dist/index.html");
 
-  console.log(`Serving index.html from: ${indexPath}`);
-  res.sendFile(indexPath);
+app.use("/api/memberreports", memberReportRoutes);
+app.use("/api/membershipreports", membershipReportRoutes);
+app.use("/api/transactionreports", transactionReportRoutes);
+app.use("/api/references", referenceRoutes);
+app.use("/api/one-to-ones", oneToOneRoutes);
+app.use("/api/thankyou-slips", thankYouSlipRoutes);
+app.use("/api", chapterRoleRoutes);
+app.use(swaggerRouter);
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.includes('.')) {
+    return next();
+  }
+
+  const indexPath = path.join(frontendDistPath, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.status(404).send("Frontend entry point (index.html) not found. Ensure the frontend is built and paths are correctly configured.");
+      } else {
+        res.status(500).send("An error occurred while trying to serve the frontend application.");
+      }
+    }
+  });
 });
 
-// 404 handler for any remaining routes
 app.use((req, res, next) => {
-  next(createError(404));
+  if (res.headersSent) {
+    return next();
+  }
+  next(createError(404, "The requested resource was not found."));
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  console.error("[ERROR HANDLER]:", err.status, err.message, process.env.NODE_ENV === 'development' ? err.stack : '');
+  res.status(err.status || 500);
+  res.json({
+    error: {
+      message: err.message || "An unexpected error occurred.",
+      status: err.status || 500,
+    },
+  });
 });
 
 module.exports = app;
