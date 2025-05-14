@@ -127,15 +127,11 @@ exports.createThankYouSlip = async (req, res) => {
     const userId = req.user.id;
     const member = await prisma.member.findFirst({
       where: { userId: userId },
-      select: { id: true, chapterId: true, memberName: true }
+      select: { id: true }
     });
 
     if (!member) {
       return res.status(404).json({ error: 'Member profile not found for current user' });
-    }
-    
-    if (!member.id) {
-      return res.status(400).json({ error: 'Invalid member ID provided' });
     }
 
     // Verify chapter exists
@@ -189,7 +185,7 @@ exports.createThankYouSlip = async (req, res) => {
       });
     }
 
-    // Construct thank you slip data
+    // Create the thank you slip
     const thankYouSlipData = {
       date: parsedDate,
       chapterId,
@@ -198,14 +194,6 @@ exports.createThankYouSlip = async (req, res) => {
       narration,
       testimony
     };
-    
-    // Add the fromMemberId if we have it
-    if (member && member.id) {
-      thankYouSlipData.fromMemberId = member.id; // Store who created this slip
-      console.log(`Adding member ID ${member.id} as sender`);
-    } else {
-      console.log('Creating thank you slip without sender ID');
-    }
 
     // Only add referenceId if it exists
     if (referenceId) {
@@ -469,13 +457,6 @@ exports.getThankYouSlipById = async (req, res) => {
           select: {
             id: true,
             name: true,
-          }
-        },
-        fromMember: {
-          select: {
-            id: true,
-            memberName: true,
-            organizationName: true
           }
         }
       }
