@@ -279,6 +279,21 @@ async function main() {
     }),
     prisma.chapter.create({
       data: {
+        name: 'Kolkata Chapter',
+        zoneId: zones[2].id,
+        locationId: locations[4].id,
+        date: new Date('2023-01-20'),
+        meetingday: 'Thursday',
+        status: true,
+        venue: 'Community Hall, Kolkata',
+        bankopeningbalance: 9000,
+        bankclosingbalance: 11000,
+        cashopeningbalance: 4000,
+        cashclosingbalance: 5000,
+      },
+    }),
+    prisma.chapter.create({
+      data: {
         name: 'Mumbai Chapter',
         zoneId: zones[3].id,
         locationId: locations[5].id,
@@ -387,13 +402,50 @@ async function main() {
         totalFees: 708,
       },
     }),
-    // Mumbai Chapter packages
+    // Kolkata Chapter packages
     prisma.package.create({
       data: {
         packageName: 'Monthly Membership',
         periodMonths: 1,
         isVenueFee: false,
         chapterId: chapters[2].id,
+        basicFees: 2200,
+        gstRate: 18,
+        gstAmount: 396,
+        totalFees: 2596,
+      },
+    }),
+    prisma.package.create({
+      data: {
+        packageName: 'Yearly Membership',
+        periodMonths: 12,
+        isVenueFee: false,
+        chapterId: chapters[2].id,
+        basicFees: 22000,
+        gstRate: 18,
+        gstAmount: 3960,
+        totalFees: 25960,
+      },
+    }),
+    prisma.package.create({
+      data: {
+        packageName: 'Monthly Venue',
+        periodMonths: 1,
+        isVenueFee: true,
+        chapterId: chapters[2].id,
+        basicFees: 550,
+        gstRate: 18,
+        gstAmount: 99,
+        totalFees: 649,
+      },
+    }),
+    // Mumbai Chapter packages
+    prisma.package.create({
+      data: {
+        packageName: 'Monthly Membership',
+        periodMonths: 1,
+        isVenueFee: false,
+        chapterId: chapters[3].id,
         basicFees: 3000,
         gstRate: 18,
         gstAmount: 540,
@@ -405,7 +457,7 @@ async function main() {
         packageName: 'Yearly Membership',
         periodMonths: 12,
         isVenueFee: false,
-        chapterId: chapters[2].id,
+        chapterId: chapters[3].id,
         basicFees: 30000,
         gstRate: 18,
         gstAmount: 5400,
@@ -417,7 +469,7 @@ async function main() {
         packageName: 'Monthly Venue',
         periodMonths: 1,
         isVenueFee: true,
-        chapterId: chapters[2].id,
+        chapterId: chapters[3].id,
         basicFees: 800,
         gstRate: 18,
         gstAmount: 144,
@@ -572,6 +624,53 @@ async function main() {
     }, chapters[1]),
   ]);
   
+  // Kolkata Chapter Members
+  const kolkataMembers = await Promise.all([
+    createMemberWithUser({
+      memberName: 'Sourav Das',
+      category: 'Real Estate',
+      businessCategory: 'Property Consultant',
+      gender: 'Male',
+      dateOfBirth: new Date('1982-07-18'),
+      mobile1: '9876543214',
+      organizationName: 'Prime Properties',
+      organizationMobileNo: '9876543214',
+      organizationEmail: 'info@primeproperties.com',
+      orgAddressLine1: '303, Business Hub',
+      orgLocation: 'Kolkata',
+      orgPincode: '700001',
+      addressLine1: '505, Sea View Apartments',
+      location: 'Kolkata',
+      pincode: '700005',
+      email: 'sourav@primeproperties.com',
+      password: memberPassword,
+      hoExpiryDate: expiryDate(12),
+      venueExpiryDate: expiryDate(1),
+    }, chapters[2]),
+    
+    createMemberWithUser({
+      memberName: 'Riya Sen',
+      category: 'Digital Marketing',
+      businessCategory: 'Social Media Management',
+      gender: 'Female',
+      dateOfBirth: new Date('1992-04-25'),
+      mobile1: '9876543215',
+      organizationName: 'Social Wave',
+      organizationMobileNo: '9876543215',
+      organizationEmail: 'info@socialwave.com',
+      orgAddressLine1: '404, Media Building',
+      orgLocation: 'Kolkata',
+      orgPincode: '700002',
+      addressLine1: '606, Urban Heights',
+      location: 'Kolkata',
+      pincode: '700006',
+      email: 'riya@socialwave.com',
+      password: memberPassword,
+      hoExpiryDate: expiryDate(3),
+      venueExpiryDate: expiryDate(1),
+    }, chapters[2]),
+  ]);
+  
   // Mumbai Chapter Members
   const mumbaiMembers = await Promise.all([
     createMemberWithUser({
@@ -594,7 +693,7 @@ async function main() {
       password: memberPassword,
       hoExpiryDate: expiryDate(12),
       venueExpiryDate: expiryDate(1),
-    }, chapters[2]),
+    }, chapters[3]),
     
     createMemberWithUser({
       memberName: 'Neha Joshi',
@@ -616,7 +715,7 @@ async function main() {
       password: memberPassword,
       hoExpiryDate: expiryDate(3),
       venueExpiryDate: expiryDate(1),
-    }, chapters[2]),
+    }, chapters[3]),
   ]);
   
   // Create Chapter Meetings
@@ -662,13 +761,13 @@ async function main() {
       },
     }),
     
-    // Mumbai Chapter Meetings
+    // Kolkata Chapter Meetings
     prisma.chapterMeeting.create({
       data: {
         date: recentDate(),
         meetingTime: '08:30 AM',
         meetingTitle: 'Business Networking',
-        meetingVenue: 'Business Center, Mumbai',
+        meetingVenue: 'Community Hall, Kolkata',
         chapterId: chapters[2].id,
       },
     }),
@@ -677,8 +776,28 @@ async function main() {
         date: futureDate(),
         meetingTime: '08:30 AM',
         meetingTitle: 'Investment Opportunities',
-        meetingVenue: 'Business Center, Mumbai',
+        meetingVenue: 'Community Hall, Kolkata',
         chapterId: chapters[2].id,
+      },
+    }),
+    
+    // Mumbai Chapter Meetings
+    prisma.chapterMeeting.create({
+      data: {
+        date: recentDate(),
+        meetingTime: '08:30 AM',
+        meetingTitle: 'Business Networking',
+        meetingVenue: 'Business Center, Mumbai',
+        chapterId: chapters[3].id,
+      },
+    }),
+    prisma.chapterMeeting.create({
+      data: {
+        date: futureDate(),
+        meetingTime: '08:30 AM',
+        meetingTitle: 'Investment Opportunities',
+        meetingVenue: 'Business Center, Mumbai',
+        chapterId: chapters[3].id,
       },
     }),
   ]);
@@ -718,17 +837,33 @@ async function main() {
       },
     }),
     
-    // Mumbai Chapter
+    // Kolkata Chapter
     prisma.meetingAttendance.create({
       data: {
         meetingId: meetings[4].id,
-        memberId: mumbaiMembers[0].member.id,
+        memberId: kolkataMembers[0].member.id,
         isPresent: true,
       },
     }),
     prisma.meetingAttendance.create({
       data: {
         meetingId: meetings[4].id,
+        memberId: kolkataMembers[1].member.id,
+        isPresent: true,
+      },
+    }),
+    
+    // Mumbai Chapter
+    prisma.meetingAttendance.create({
+      data: {
+        meetingId: meetings[6].id,
+        memberId: mumbaiMembers[0].member.id,
+        isPresent: true,
+      },
+    }),
+    prisma.meetingAttendance.create({
+      data: {
+        meetingId: meetings[6].id,
         memberId: mumbaiMembers[1].member.id,
         isPresent: true,
       },
@@ -800,7 +935,7 @@ async function main() {
       },
     }),
     
-    // Mumbai Chapter Visitors
+    // Kolkata Chapter Visitors
     prisma.visitor.create({
       data: {
         name: 'Rohan Desai',
@@ -810,11 +945,32 @@ async function main() {
         isCrossChapter: false,
         meetingId: meetings[4].id,
         chapterId: chapters[2].id,
-        chapter: 'Mumbai Chapter',
-        invitedById: mumbaiMembers[0].member.id,
+        chapter: 'Kolkata Chapter',
+        invitedById: kolkataMembers[0].member.id,
         category: 'Financial Services',
         businessDetails: 'Investment advisor',
         addressLine1: '404, Finance Tower',
+        city: 'Kolkata',
+        pincode: '700001',
+        status: 'Attended',
+      },
+    }),
+    
+    // Mumbai Chapter Visitors
+    prisma.visitor.create({
+      data: {
+        name: 'Suresh Kumar',
+        email: 'suresh@gmail.com',
+        gender: 'Male',
+        mobile1: '9876543224',
+        isCrossChapter: false,
+        meetingId: meetings[6].id,
+        chapterId: chapters[3].id,
+        chapter: 'Mumbai Chapter',
+        invitedById: mumbaiMembers[0].member.id,
+        category: 'Real Estate',
+        businessDetails: 'Property consultant',
+        addressLine1: '505, Property Hub',
         city: 'Mumbai',
         pincode: '400001',
         status: 'Attended',
@@ -1007,13 +1163,102 @@ async function main() {
       },
     }),
     
+    // Kolkata Chapter Memberships - HO Membership for Sourav Das
+    prisma.membership.create({
+      data: {
+        memberId: kolkataMembers[0].member.id,
+        invoiceNumber: 'INV-KOL-001-HO',
+        invoiceDate: new Date('2024-03-01'),
+        packageId: packages[7].id, // Yearly HO membership for Kolkata
+        packageStartDate: new Date('2024-03-01'),
+        packageEndDate: expiryDate(12),
+        basicFees: 22000,
+        cgstRate: 9,
+        cgstAmount: 1980,
+        sgstRate: 9,
+        sgstAmount: 1980,
+        totalTax: 3960,
+        totalAmount: 25960,
+        totalFees: 25960,
+        paymentDate: new Date('2024-03-01'),
+        paymentMode: 'NEFT',
+        neftNumber: 'NEFT123456',
+      },
+    }),
+    // Kolkata Chapter Memberships - Venue Membership for Sourav Das
+    prisma.membership.create({
+      data: {
+        memberId: kolkataMembers[0].member.id,
+        invoiceNumber: 'INV-KOL-001-VENUE',
+        invoiceDate: new Date('2024-03-01'),
+        packageId: packages[8].id, // Monthly venue fee
+        packageStartDate: new Date('2024-03-01'),
+        packageEndDate: expiryDate(1),
+        basicFees: 550,
+        cgstRate: 9,
+        cgstAmount: 49.5,
+        sgstRate: 9,
+        sgstAmount: 49.5,
+        totalTax: 99,
+        totalAmount: 649,
+        totalFees: 649,
+        paymentDate: new Date('2024-03-01'),
+        paymentMode: 'NEFT',
+        neftNumber: 'NEFT123457',
+      },
+    }),
+    // Kolkata Chapter Memberships - HO Membership for Riya Sen
+    prisma.membership.create({
+      data: {
+        memberId: kolkataMembers[1].member.id,
+        invoiceNumber: 'INV-KOL-002-HO',
+        invoiceDate: new Date('2024-03-15'),
+        packageId: packages[6].id, // Monthly HO membership for Kolkata
+        packageStartDate: new Date('2024-03-15'),
+        packageEndDate: expiryDate(3),
+        basicFees: 2200,
+        cgstRate: 9,
+        cgstAmount: 198,
+        sgstRate: 9,
+        sgstAmount: 198,
+        totalTax: 396,
+        totalAmount: 2596,
+        totalFees: 2596,
+        paymentDate: new Date('2024-03-15'),
+        paymentMode: 'Card',
+        utrNumber: 'CARD123456',
+      },
+    }),
+    // Kolkata Chapter Memberships - Venue Membership for Riya Sen
+    prisma.membership.create({
+      data: {
+        memberId: kolkataMembers[1].member.id,
+        invoiceNumber: 'INV-KOL-002-VENUE',
+        invoiceDate: new Date('2024-03-15'),
+        packageId: packages[8].id, // Monthly venue fee
+        packageStartDate: new Date('2024-03-15'),
+        packageEndDate: expiryDate(1),
+        basicFees: 550,
+        cgstRate: 9,
+        cgstAmount: 49.5,
+        sgstRate: 9,
+        sgstAmount: 49.5,
+        totalTax: 99,
+        totalAmount: 649,
+        totalFees: 649,
+        paymentDate: new Date('2024-03-15'),
+        paymentMode: 'Card',
+        utrNumber: 'CARD123457',
+      },
+    }),
+    
     // Mumbai Chapter Memberships - HO Membership for Vikram Mehta
     prisma.membership.create({
       data: {
         memberId: mumbaiMembers[0].member.id,
         invoiceNumber: 'INV-MUM-001-HO',
         invoiceDate: new Date('2024-03-01'),
-        packageId: packages[7].id, // Yearly HO membership for Mumbai
+        packageId: packages[9].id, // Yearly HO membership for Mumbai
         packageStartDate: new Date('2024-03-01'),
         packageEndDate: expiryDate(12),
         basicFees: 30000,
@@ -1026,7 +1271,7 @@ async function main() {
         totalFees: 35400,
         paymentDate: new Date('2024-03-01'),
         paymentMode: 'NEFT',
-        neftNumber: 'NEFT123456',
+        neftNumber: 'NEFT789012',
       },
     }),
     // Mumbai Chapter Memberships - Venue Membership for Vikram Mehta
@@ -1035,7 +1280,7 @@ async function main() {
         memberId: mumbaiMembers[0].member.id,
         invoiceNumber: 'INV-MUM-001-VENUE',
         invoiceDate: new Date('2024-03-01'),
-        packageId: packages[8].id, // Monthly venue fee
+        packageId: packages[10].id, // Monthly venue fee
         packageStartDate: new Date('2024-03-01'),
         packageEndDate: expiryDate(1),
         basicFees: 800,
@@ -1048,7 +1293,7 @@ async function main() {
         totalFees: 944,
         paymentDate: new Date('2024-03-01'),
         paymentMode: 'NEFT',
-        neftNumber: 'NEFT123457',
+        neftNumber: 'NEFT789013',
       },
     }),
     // Mumbai Chapter Memberships - HO Membership for Neha Joshi
@@ -1057,7 +1302,7 @@ async function main() {
         memberId: mumbaiMembers[1].member.id,
         invoiceNumber: 'INV-MUM-002-HO',
         invoiceDate: new Date('2024-03-15'),
-        packageId: packages[6].id, // Monthly HO membership for Mumbai
+        packageId: packages[7].id, // Monthly HO membership for Mumbai
         packageStartDate: new Date('2024-03-15'),
         packageEndDate: expiryDate(3),
         basicFees: 8000,
@@ -1070,7 +1315,7 @@ async function main() {
         totalFees: 9440,
         paymentDate: new Date('2024-03-15'),
         paymentMode: 'Card',
-        utrNumber: 'CARD123456',
+        utrNumber: 'CARD789012',
       },
     }),
     // Mumbai Chapter Memberships - Venue Membership for Neha Joshi
@@ -1079,7 +1324,7 @@ async function main() {
         memberId: mumbaiMembers[1].member.id,
         invoiceNumber: 'INV-MUM-002-VENUE',
         invoiceDate: new Date('2024-03-15'),
-        packageId: packages[8].id, // Monthly venue fee
+        packageId: packages[10].id, // Monthly venue fee
         packageStartDate: new Date('2024-03-15'),
         packageEndDate: expiryDate(1),
         basicFees: 800,
@@ -1092,7 +1337,7 @@ async function main() {
         totalFees: 944,
         paymentDate: new Date('2024-03-15'),
         paymentMode: 'Card',
-        utrNumber: 'CARD123457',
+        utrNumber: 'CARD789013',
       },
     }),
   ]);
@@ -1152,6 +1397,25 @@ async function main() {
         gstAmount: 450,
         invoiceNumber: 'INV-BLR-001',
         partyName: 'Ankit Patel',
+      },
+    }),
+    
+    // Kolkata Chapter Transactions
+    prisma.transaction.create({
+      data: {
+        chapterId: chapters[2].id,
+        date: new Date('2024-03-01'),
+        accountType: 'bank',
+        transactionType: 'credit',
+        amount: 25960,
+        transactionHead: 'Membership Fee',
+        narration: 'Membership fee from Sourav Das',
+        reference: 'INV-KOL-001',
+        hasInvoice: true,
+        gstRate: 18,
+        gstAmount: 3960,
+        invoiceNumber: 'INV-KOL-001',
+        partyName: 'Sourav Das',
       },
     }),
   ]);
@@ -1223,6 +1487,36 @@ async function main() {
         },
       },
     }),
+    
+    // Kolkata Chapter References
+    prisma.reference.create({
+      data: {
+        date: recentDate(),
+        noOfReferences: 1,
+        chapterId: chapters[2].id,
+        giverId: kolkataMembers[0].member.id,
+        receiverId: kolkataMembers[1].member.id,
+        urgency: 'Low',
+        self: false,
+        nameOfReferral: 'Rohan Desai',
+        mobile1: '9876543232',
+        email: 'rohan@gmail.com',
+        remarks: 'Looking for financial services',
+        addressLine1: '404, Finance Tower',
+        location: 'Kolkata',
+        pincode: '700001',
+        status: 'pending',
+        statusHistory: {
+          create: [
+            {
+              date: recentDate(),
+              status: 'pending',
+              comment: 'Initial referral',
+            },
+          ],
+        },
+      },
+    }),
   ]);
   
   // Create One-to-One Meetings
@@ -1248,6 +1542,18 @@ async function main() {
         requestedId: bangaloreMembers[1].member.id,
         chapterId: chapters[1].id,
         remarks: 'Software training opportunity discussion',
+        status: 'pending',
+      },
+    }),
+    
+    // Kolkata Chapter One-to-One
+    prisma.oneToOne.create({
+      data: {
+        date: futureDate(),
+        requesterId: kolkataMembers[0].member.id,
+        requestedId: kolkataMembers[1].member.id,
+        chapterId: chapters[2].id,
+        remarks: 'Real estate investment discussion',
         status: 'pending',
       },
     }),

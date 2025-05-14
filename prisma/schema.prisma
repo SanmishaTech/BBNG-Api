@@ -21,7 +21,11 @@ model User {
   updatedAt         DateTime  @updatedAt
 
   member   Member? @relation("UserMemberRelation")
-  memberId Int? // This field still exists. If Member.userId is the true FK for the 
+  memberId Int? // This field still exists. If Member.userId is the true FK for the user, this might be redundant or for a different purpose.
+  // Assuming Member.userId is the primary link to User for member-specific data.
+
+  // Relation for ZoneRoleHistory
+  zoneRoleHistoriesPerformed ZoneRoleHistory[] @relation("UserPerformedZoneRoleHistory")
 
   @@map("users")
 }
@@ -30,10 +34,13 @@ model Zone {
   id        Int        @id @default(autoincrement())
   name      String
   active    Boolean    @default(true)
-  locations Location[] // Add this field for the reverse relation
+  locations Location[]
   chapters  Chapter[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+
+  // Relation to Zone Roles
+  zoneRoles ZoneRole[]
 
   @@map("zones")
 }
@@ -45,7 +52,7 @@ model Location {
   location  String
   chapters  Chapter[]
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) // Note: This was @default(now()), typically updatedAt should be @updatedAt
+  updatedAt DateTime  @updatedAt
 
   @@map("locations")
 }
@@ -55,7 +62,7 @@ model Category {
   name        String
   description String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+  updatedAt   DateTime @updatedAt
 
   @@map("category")
 }
@@ -66,7 +73,7 @@ model SiteSetting {
   value String
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) // Note: Consider @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@map("site_settings")
 }
@@ -76,7 +83,7 @@ model Training {
   trainingDate  DateTime
   trainingTopic String
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now()) // Note: Consider @updatedAt
+  updatedAt     DateTime @updatedAt
 
   @@map("trainings")
 }
@@ -88,7 +95,9 @@ model Message {
   message    String   @db.Text
   attachment String?  @db.Text
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) // Note: Consider @updatedAt
+  updatedAt  DateTime @updatedAt
+
+  @@map("messages")
 }
 
 model Chapter {
@@ -110,14 +119,14 @@ model Chapter {
   updatedAt          DateTime @updatedAt
 
   members      Member[]
-  packages     Package[] // Added relation to Package model
-  meetings     ChapterMeeting[] // Relation to ChapterMeeting model
-  visitors     Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
-  transactions Transaction[] // Added relation to Transaction model
-  references   Reference[] // Added relation to Reference model
-  oneToOnes    OneToOne[] // Relation to OneToOne model
-  chapterRoles ChapterRole[] // Relation to chapter roles
-  thankYouSlips ThankYouSlip[] // Relation to thank you slips
+  packages     Package[]
+  meetings     ChapterMeeting[]
+  visitors     Visitor[]        @relation("VisitorHomeChapter")
+  transactions Transaction[]
+  references   Reference[]
+  oneToOnes    OneToOne[]
+  chapterRoles ChapterRole[]
+  thankYouSlips ThankYouSlip[]
 
   @@map("chapters")
 }
@@ -127,7 +136,7 @@ model Member {
   memberName              String
   chapterId               Int?
   chapter                 Chapter? @relation(fields: [chapterId], references: [id])
-  chapterRoles           ChapterRole[]  // Relation to assigned chapter roles
+  chapterRoles            ChapterRole[]
   category                String
   businessCategory        String
   gender                  String
@@ -165,13 +174,12 @@ model Member {
   password        String
 
   users  User? @relation("UserMemberRelation", fields: [userId], references: [id])
-  userId Int?  @unique // Foreign key to User model
+  userId Int?  @unique
 
-  memberships Membership[] // Relation to memberships
-   requirements Requirement[] // Relation to requirements
-  
-  invitedVisitors    Visitor[] // Visitors invited by this member
-   meetingAttendances MeetingAttendance[] // Attendance records for this member
+  memberships        Membership[]
+  requirements       Requirement[]
+  invitedVisitors    Visitor[]
+  meetingAttendances MeetingAttendance[]
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -179,10 +187,14 @@ model Member {
 
   givenReferences     Reference[] @relation("GivenReferences")
   receivedReferences  Reference[] @relation("ReceivedReferences")
+  requestedOneToOnes  OneToOne[]  @relation("RequestedOneToOnes")
+  receivedOneToOnes   OneToOne[]  @relation("ReceivedOneToOnes")
   
-  // One-to-One relationships
-  requestedOneToOnes  OneToOne[] @relation("RequestedOneToOnes")
-  receivedOneToOnes   OneToOne[] @relation("ReceivedOneToOnes")
+  // Thank You Slips sent by this member
+  sentThankYouSlips   ThankYouSlip[]
+
+  // Relation to Zone Roles
+  zoneRoles ZoneRole[]
 
   @@map("members")
 }
@@ -356,7 +368,6 @@ model Transaction {
 
   @@map("transactions")
 }
-  
 
 model Requirement {
   id          Int      @id @default(autoincrement())
@@ -506,13 +517,17 @@ model ThankYouSlip {
   id          Int      @id @default(autoincrement())
   date        DateTime
   
-  // Reference relationship
-  referenceId Int
-  reference   Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  // Reference relationship (optional for direct thank you slips)
+  referenceId Int?
+  reference   Reference? @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   
   // Chapter relationship
   chapterId   Int
   chapter     Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Member who created this thank you slip (optional for backward compatibility)
+  fromMemberId Int?
+  fromMember   Member? @relation(fields: [fromMemberId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   
   // Details
   toWhom      String
@@ -524,4 +539,49 @@ model ThankYouSlip {
   updatedAt   DateTime @updatedAt
   
   @@map("thank_you_slips")
+}
+
+// -------------------- ZONE ROLE MODELS --------------------
+
+model ZoneRole {
+  id        Int      @id @default(autoincrement())
+  roleType  String   // "Regional Director", "Joint Secretary"
+
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  zoneId    Int
+  zone      Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  history   ZoneRoleHistory[] // Relation to role history
+
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([zoneId, roleType]) // Ensures a role type is unique per zone
+  @@map("zone_roles")
+}
+
+model ZoneRoleHistory {
+  id        Int      @id @default(autoincrement())
+
+  roleId    Int
+  role      ZoneRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Denormalized fields for historical record integrity
+  memberId  Int      // Member who held the role
+  zoneId    Int      // Zone where role was held
+  roleType  String   // Type of role
+
+  action    String   // e.g., "assigned", "removed", "replaced"
+
+  // User who made the change
+  performedById   Int?   // ID of the user who made the change (links to User model)
+  performedBy     User?  @relation("UserPerformedZoneRoleHistory", fields: [performedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  performedByName String? // Name of the user (backup in case User record is modified/deleted)
+
+  startDate DateTime @default(now()) // When this history record became active (role assigned/changed)
+  endDate   DateTime?             // When this role assignment ended (null if current)
+
+  @@map("zone_role_history")
 }

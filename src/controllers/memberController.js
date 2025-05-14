@@ -1083,8 +1083,11 @@ const getMembershipStatus = asyncHandler(async (req, res) => {
       expiryType = "Venue";
     }
 
-    // Active only if both are not expired
-    const isActive = !(hoExpired || venueExpired);
+    // Active if both HO expiry and venue expiry dates are in the future
+    // If either expiry date doesn't exist, that part is considered expired
+    const hoActive = member.hoExpiryDate && member.hoExpiryDate >= now;
+    const venueActive = member.venueExpiryDate && member.venueExpiryDate >= now;
+    const isActive = hoActive && venueActive;
 
     // If member is inactive due to expiry, update the user's active status
     if (!isActive && member.userId) {
@@ -1168,6 +1171,7 @@ const searchMembers = async (req, res, next) => {
       search = "",
       category,
       businessCategory,
+      chapterId, // Accept chapterId as a query parameter
       sortBy = "memberName",
       sortOrder = "asc",
     } = req.query;
@@ -1179,6 +1183,14 @@ const searchMembers = async (req, res, next) => {
 
     // Build where conditions
     const where = { active: true };
+
+    // Add chapterId filter if provided
+    if (chapterId) {
+      const parsedChapterId = parseInt(chapterId, 10);
+      if (!isNaN(parsedChapterId)) {
+        where.chapterId = parsedChapterId;
+      }
+    }
 
     // Add category filter if provided
     if (category) {
@@ -1193,12 +1205,12 @@ const searchMembers = async (req, res, next) => {
     // Add search filter if provided
     if (search) {
       where.OR = [
-        { memberName: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { organizationName: { contains: search, mode: "insensitive" } },
-        { businessCategory: { contains: search, mode: "insensitive" } },
-        { specificGive: { contains: search, mode: "insensitive" } },
-        { specificAsk: { contains: search, mode: "insensitive" } },
+        { memberName: { contains: search } },
+        { email: { contains: search } },
+        { organizationName: { contains: search } },
+        { businessCategory: { contains: search } },
+        { specificGive: { contains: search } },
+        { specificAsk: { contains: search } },
       ];
     }
 
@@ -1208,6 +1220,11 @@ const searchMembers = async (req, res, next) => {
     // Execute query with pagination and sorting
     const members = await prisma.member.findMany({
       where,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
       select: {
         id: true,
         memberName: true,
@@ -1232,9 +1249,6 @@ const searchMembers = async (req, res, next) => {
           },
         },
       },
-      skip,
-      take: limit,
-      orderBy: { [sortBy]: sortOrder },
     });
 
     // Return paginated results
@@ -1251,17 +1265,69 @@ const searchMembers = async (req, res, next) => {
   }
 };
 
+/**
+ * Get the current user's member profile
+ * @route GET /api/members/profile
+ */
+const getCurrentMemberProfile = async (req, res) => {
+  try {
+    // Ensure we have a user ID from authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ errors: { message: "Not authenticated" } });
+    }
+    
+    const userId = req.user.id;
+    console.log(`Getting member profile for user ID: ${userId}`);
+    
+    // Find member profile for current user
+    const member = await prisma.member.findFirst({
+      where: { userId },
+      select: {
+        id: true,
+        memberName: true,
+        organizationName: true,
+        chapterId: true,
+        email: true,
+        mobile1: true, // Changed from phoneNumber to mobile1 based on your schema
+        profilePicture1: true,
+        chapter: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    // Log what we found for debugging
+    if (member) {
+      console.log(`Found member profile: ${member.id} - ${member.memberName}`);
+    } else {
+      console.log(`No member profile found for user ID: ${userId}`);
+    }
+
+    if (!member) {
+      return res.status(404).json({ errors: { message: "Member profile not found for current user" } });
+    }
+
+    // Return the member profile
+    res.status(200).json({ member });
+  } catch (error) {
+    console.error('Error getting member profile:', error);
+    res.status(500).json({ errors: { message: "Failed to get member profile" } });
+  }
+};
+
 module.exports = {
-  getMembers, // Make sure this is defined or imported
   createMember,
-  getMemberById, // Make sure this is defined or imported
-  updateMember, // Make sure this is defined or imported
-  deleteMember, // Make sure this is defined or imported
-  updateProfilePictures, // Make sure this is defined or imported
-  deleteProfilePicture, // Make sure this is defined or imported
-  getProfilePicture, // Make sure this is defined or imported
-  getMembershipStatus, // New function to check membership status
-  toggleUserStatus, // Function to toggle user's active status only
+  getMembers,
+  getMemberById,
+  updateMember,
+  deleteMember,
+  updateProfilePictures, // Based on file summary
+  deleteProfilePicture,  // Based on file summary
+  getProfilePicture,
   getMemberDetailsForReference,
   searchMembers,
+  getCurrentMemberProfile
 };

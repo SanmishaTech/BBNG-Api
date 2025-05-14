@@ -108,6 +108,21 @@ const assignChapterRole = asyncHandler(async (req, res) => {
   });
   if (!member) throw createError(404, "Member not found");
 
+  // === START NEW VALIDATION ===
+  const { roleType } = req.body;
+  const restrictedRoles = ["chapterHead", "secretary", "treasurer"];
+
+  if (restrictedRoles.includes(roleType)) {
+    if (member.chapterId !== chapterId) { // chapterId is from req.params
+      return res.status(400).json({
+        errors: {
+          message: `For role '${roleType}', the member must belong to the same chapter.`,
+        },
+      });
+    }
+  }
+  // === END NEW VALIDATION ===
+
   // Check if role already assigned to someone else in this chapter
   const existingRole = await prisma.chapterRole.findFirst({
     where: {

@@ -59,9 +59,9 @@ const frontendPath =
   process.env.NODE_ENV === "production"
     ? path.join(
         process.env.FRONTEND_PATH ||
-          "/opt/bitnami/apache/htdocs/BBNG/BBNG-FrontEnd/dist"
+          "/opt/bitnami/apache/htdocs/BBNG/frontend/dist"
       )
-    : path.join(__dirname, "../../BBNG-FrontEnd/dist");
+    : path.join(__dirname, "../../frontend/dist");
 
 console.log(`Serving frontend from: ${frontendPath}`);
 app.use(express.static(frontendPath));
@@ -126,10 +126,10 @@ app.get("*", (req, res) => {
     process.env.NODE_ENV === "production"
       ? path.join(
           process.env.FRONTEND_PATH ||
-            "/opt/bitnami/apache/htdocs/BBNG/BBNG-FrontEnd/dist",
+            "/opt/bitnami/apache/htdocs/BBNG/frontend/dist",
           "index.html"
         )
-      : path.resolve(__dirname, "../../BBNG-FrontEnd/dist/index.html");
+      : path.resolve(__dirname, "../../frontend/dist/index.html");
 
   console.log(`Serving index.html from: ${indexPath}`);
   res.sendFile(indexPath);
