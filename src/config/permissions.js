@@ -28,10 +28,10 @@ module.exports = {
   "categories.update": ["super_admin", "admin"],
   "categories.delete": ["super_admin"],
   //messages
-  "messages.read": ["super_admin", "admin"],
-  "messages.write": ["super_admin", "admin"],
-  "messages.update": ["super_admin", "admin"],
-  "messages.delete": ["super_admin"],
+  "messages.read": ["super_admin", "admin", "member", "user"],
+  "messages.write": ["super_admin", "admin", "member", "user"],
+  "messages.update": ["super_admin", "admin", "member", "user"],
+  "messages.delete": ["super_admin", "admin", "member", "user"],
   // requirements
   "requirements.read": ["super_admin", "admin", "member", "user"],
   "requirements.write": ["super_admin", "admin", "member", "user"],

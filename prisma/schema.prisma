@@ -109,6 +109,10 @@ model Message {
   attachment String?  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  chapter    Chapter? @relation(fields: [chapterId], references: [id])
+  chapterId  Int?
+
+  @@index([chapterId])
 
   @@map("messages")
 }
@@ -132,14 +136,16 @@ model Chapter {
   updatedAt          DateTime @updatedAt
 
   members      Member[]
-  packages     Package[]
-  meetings     ChapterMeeting[]
-  visitors     Visitor[]        @relation("VisitorHomeChapter")
-  transactions Transaction[]
-  references   Reference[]
-  oneToOnes    OneToOne[]
-  chapterRoles ChapterRole[]
-  thankYouSlips ThankYouSlip[]
+  packages     Package[] // Added relation to Package model
+  meetings     ChapterMeeting[] // Relation to ChapterMeeting model
+  visitors     Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
+  transactions Transaction[] // Added relation to Transaction model
+  references   Reference[] // Added relation to Reference model
+  oneToOnes    OneToOne[] // Relation to OneToOne model
+  messages     Message[] // Relation to Message model
+  chapterRoles ChapterRole[] // Relation to chapter roles
+  thankYouSlips ThankYouSlip[] // Relation to thank you slips
+
 
   @@map("chapters")
 }
@@ -554,6 +560,16 @@ model ThankYouSlip {
   @@map("thank_you_slips")
 }
 
+model Statistics {
+  id                Int       @id @default(autoincrement())
+  businessGenerated Decimal
+  referenceShared   Int
+  totalVisitors     Int
+  date              DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("statistics")
 // -------------------- ZONE ROLE MODELS --------------------
 
 model ZoneRole {
