@@ -570,8 +570,7 @@ model Statistics {
   updatedAt         DateTime  @updatedAt
 
   @@map("statistics")
-// -------------------- ZONE ROLE MODELS --------------------
-
+}
 model ZoneRole {
   id        Int      @id @default(autoincrement())
   roleType  String   // "Regional Director", "Joint Secretary"

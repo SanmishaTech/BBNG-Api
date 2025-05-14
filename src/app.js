@@ -29,12 +29,9 @@ const membershipReportRoutes = require("./routes/membershipReports");
 const transactionReportRoutes = require("./routes/transactionReports");
 const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const chapterRoleRoutes = require("./routes/chapterRoles");
-<<<<<<< HEAD
 const subCategoryRoutes = require("./routes/subCategory");
-const statisticsRoutes = require('./routes/statistics');
+const statisticsRoutes = require("./routes/statistics");
 
-=======
->>>>>>> 6ac8a9c (asd)
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
 const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
@@ -46,12 +43,15 @@ app.use(morgan("dev"));
 app.use(
   helmet({
     crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+    contentSecurityPolicy:
+      process.env.NODE_ENV === "production" ? undefined : false,
   })
 );
 
 const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-const allowedOrigins = allowedOriginsEnv ? allowedOriginsEnv.split(',') : ['http://localhost:5173'];
+const allowedOrigins = allowedOriginsEnv
+  ? allowedOriginsEnv.split(",")
+  : ["http://localhost:5173"];
 
 app.use(
   cors({
@@ -59,7 +59,7 @@ app.use(
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error("Not allowed by CORS"));
       }
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -73,8 +73,11 @@ app.use(express.urlencoded({ extended: true }));
 
 const frontendDistPath =
   process.env.NODE_ENV === "production"
-    ? process.env.FRONTEND_PATH || path.resolve(__dirname, "..", "..", "frontend", "dist")
-    : path.resolve(__dirname, "..", "..", "frontend", "dist");
+    ? process.env.FRONTEND_PATH ||
+      path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
+    : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
+
+console.log(`Frontend build path: ${frontendDistPath}`);
 
 console.log(`Serving frontend static files from: ${frontendDistPath}`);
 app.use(express.static(frontendDistPath));
@@ -113,21 +116,30 @@ app.use("/api/transactionreports", transactionReportRoutes);
 app.use("/api/references", referenceRoutes);
 app.use("/api/one-to-ones", oneToOneRoutes);
 app.use("/api/thankyou-slips", thankYouSlipRoutes);
-app.use("/api", chapterRoleRoutes);
+app.use("/api/subcategories", subCategoryRoutes);
+app.use("/api/chapter-roles", chapterRoleRoutes);
 app.use(swaggerRouter);
 
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith('/api/') || req.path.includes('.')) {
+  if (req.path.startsWith("/api/") || req.path.includes(".")) {
     return next();
   }
 
   const indexPath = path.join(frontendDistPath, "index.html");
   res.sendFile(indexPath, (err) => {
     if (err) {
-      if (err.code === 'ENOENT') {
-        res.status(404).send("Frontend entry point (index.html) not found. Ensure the frontend is built and paths are correctly configured.");
+      if (err.code === "ENOENT") {
+        res
+          .status(404)
+          .send(
+            "Frontend entry point (index.html) not found. Ensure the frontend is built and paths are correctly configured."
+          );
       } else {
-        res.status(500).send("An error occurred while trying to serve the frontend application.");
+        res
+          .status(500)
+          .send(
+            "An error occurred while trying to serve the frontend application."
+          );
       }
     }
   });
@@ -144,7 +156,12 @@ app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
   }
-  console.error("[ERROR HANDLER]:", err.status, err.message, process.env.NODE_ENV === 'development' ? err.stack : '');
+  console.error(
+    "[ERROR HANDLER]:",
+    err.status,
+    err.message,
+    process.env.NODE_ENV === "development" ? err.stack : ""
+  );
   res.status(err.status || 500);
   res.json({
     error: {
