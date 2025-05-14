@@ -633,7 +633,7 @@ router.get(
  *       404:
  *         description: Member not found
  */
-router.get("/:id/membership-status", auth, memberController.getMembershipStatus);
+// router.get("/:id/membership-status", auth, memberController.getMembershipStatus);
 
 /**
  * @swagger
@@ -664,7 +664,7 @@ router.get("/:id/membership-status", auth, memberController.getMembershipStatus)
  *       404:
  *         description: Member not found
  */
-router.patch("/:id/user-status", auth, memberController.toggleUserStatus);
+// router.patch("/:id/user-status", auth, memberController.toggleUserStatus);
 
 /**
  * @swagger
