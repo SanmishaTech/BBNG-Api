@@ -353,6 +353,7 @@ model MeetingAttendance {
   memberId Int
 
   isPresent Boolean @default(false)
+  isSubstitute Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
