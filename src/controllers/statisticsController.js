@@ -445,6 +445,111 @@ const getRecentChapterMeetings = async (options = {}) => {
   }
 };
 
+/**
+ * Get all trainings
+ * @param {Object} options - Query options
+ * @param {number} [options.limit=5] - Maximum number of trainings to return
+ * @returns {Promise<Object>} All trainings
+ */
+const getTrainings = async (options = {}) => {
+  try {
+    const { limit = 5 } = options;
+    
+    const trainings = await prisma.training.findMany({
+      orderBy: {
+        trainingDate: 'asc'
+      },
+      take: parseInt(limit)
+    });
+    
+    return {
+      trainings,
+      count: trainings.length
+    };
+  } catch (error) {
+    console.error('Error in getTrainings:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+/**
+ * Get upcoming birthdays
+ * @param {Object} options - Query options
+ * @param {number} [options.daysAhead=180] - Number of days ahead to check for birthdays
+ * @param {number} [options.limit=5] - Maximum number of birthdays to return
+ * @returns {Promise<Object>} Upcoming birthdays
+ */
+const getUpcomingBirthdays = async (options = {}) => {
+  try {
+    const { daysAhead = 180, limit = 5 } = options;
+    
+    // Current date
+    const today = new Date();
+    
+    // Get all members
+    const members = await prisma.member.findMany({
+      where: {
+        active: true,
+      },
+      select: {
+        id: true,
+        memberName: true,
+        dateOfBirth: true,
+        chapterId: true,
+        organizationName: true,
+        businessCategory: true,
+        chapter: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    
+    // Process members to find upcoming birthdays
+    const upcomingBirthdays = members
+      .map(member => {
+        const birthDate = new Date(member.dateOfBirth);
+        const birthdayThisYear = new Date(
+          today.getFullYear(),
+          birthDate.getMonth(),
+          birthDate.getDate()
+        );
+        
+        // If birthday already passed this year, look at next year's birthday
+        if (birthdayThisYear < today) {
+          birthdayThisYear.setFullYear(birthdayThisYear.getFullYear() + 1);
+        }
+        
+        // Calculate days until birthday
+        const daysUntilBirthday = Math.ceil(
+          (birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        return {
+          ...member,
+          daysUntilBirthday,
+          upcomingBirthday: birthdayThisYear
+        };
+      })
+      .filter(member => member.daysUntilBirthday <= daysAhead) // Filter for birthdays within the next 'daysAhead' days
+      .sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday) // Sort by closest birthday
+      .slice(0, parseInt(limit)); // Limit results
+    
+    return {
+      birthdays: upcomingBirthdays,
+      count: upcomingBirthdays.length
+    };
+  } catch (error) {
+    console.error('Error in getUpcomingBirthdays:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
 module.exports = {
   getBusinessGenerated,
   getReferencesCount,
@@ -456,5 +561,7 @@ module.exports = {
   getChapterVisitorsCount,
   getChapterOneToOneCount,
   getRecentMessages,
-  getRecentChapterMeetings
+  getRecentChapterMeetings,
+  getTrainings,
+  getUpcomingBirthdays
 };

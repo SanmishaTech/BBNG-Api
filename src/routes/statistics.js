@@ -229,4 +229,38 @@ router.get("/chapter-meetings/:chapterId", async (req, res) => {
   }
 });
 
+/**
+ * @route GET /api/statistics/trainings
+ * @desc Get list of all trainings
+ * @access Private
+ */
+router.get("/trainings", async (req, res) => {
+  try {
+    const limit = req.query.limit || 5;
+    const trainings = await statisticsController.getTrainings({ limit });
+    res.json(trainings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @route GET /api/statistics/upcoming-birthdays
+ * @desc Get list of upcoming birthdays
+ * @access Private
+ */
+router.get("/upcoming-birthdays", async (req, res) => {
+  try {
+    const daysAhead = req.query.daysAhead || 180;
+    const limit = req.query.limit || 5;
+    const birthdays = await statisticsController.getUpcomingBirthdays({ 
+      daysAhead,
+      limit 
+    });
+    res.json(birthdays);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
