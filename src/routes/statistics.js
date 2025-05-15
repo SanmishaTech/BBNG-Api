@@ -263,4 +263,19 @@ router.get("/upcoming-birthdays", async (req, res) => {
   }
 });
 
+/**
+ * @route GET /api/statistics/member-received-references/:memberId
+ * @desc Get count of references received by a specific member
+ * @access Private
+ */
+router.get("/member-received-references/:memberId", async (req, res) => {
+  try {
+    const memberId = req.params.memberId;
+    const receivedReferencesStats =
+      await statisticsController.getMemberReceivedReferences({ memberId });
+    res.json(receivedReferencesStats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 module.exports = router;

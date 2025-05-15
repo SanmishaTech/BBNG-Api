@@ -170,10 +170,38 @@ const getMemberGivenReferences = async (options = {}) => {
   }
 };
 
-// so here we have chapterId in the thankyou slip give me the sum 
-// amount of thankyou slip of that particular chapter and we will find the memberId from the local storage through that we will get the chapterId
-// (make the seperate function in the controller) 
 
+/**
+ * Get count of references given by a specific member
+ * @param {Object} options - Query options
+ * @param {number} options.memberId - Member ID to count references for
+ * @returns {Promise<Object>} Count of references given by the member
+ */
+const getMemberReceivedReferences = async (options = {}) => {
+  try {
+    const { memberId } = options;
+    
+    if (!memberId) {
+      throw new Error('Member ID is required');
+    }
+    
+    const count = await prisma.reference.count({
+      where: {
+        receiverId: parseInt(memberId)
+      }
+    });
+    
+    return {
+      total: count
+    };
+  } catch (error) {
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+ 
 /**
  * Get total amount from thank you slips for a specific chapter
  * @param {Object} options - Query options
@@ -183,29 +211,27 @@ const getMemberGivenReferences = async (options = {}) => {
 const getChapterBusinessGenerated = async (options = {}) => {
   try {
     const { chapterId } = options;
-    
+
     if (!chapterId) {
       throw new Error('Chapter ID is required');
     }
-    
-    // First query the thankYouSlips that have references from the specified chapter
+
+    // Find all thankYouSlips directly by chapterId
     const thankYouSlips = await prisma.thankYouSlip.findMany({
       where: {
-        reference: {
-          chapterId: parseInt(chapterId)
-        }
+        chapterId: parseInt(chapterId)
       },
-      include: {
-        reference: true // Include reference details for debugging
+      select: {
+        amount: true
       }
     });
-    
+
+    // Sum the amounts
     const totalAmount = thankYouSlips.reduce((sum, slip) => {
-      // Convert string amount to number, removing any non-numeric characters except decimal point
-      const numericAmount = parseFloat(slip.amount.replace(/[^0-9.]/g, '')) || 0;
+      const numericAmount = parseFloat(slip.amount?.replace(/[^0-9.]/g, '')) || 0;
       return sum + numericAmount;
     }, 0);
-    
+
     return {
       total: totalAmount,
       count: thankYouSlips.length
@@ -217,6 +243,7 @@ const getChapterBusinessGenerated = async (options = {}) => {
     await prisma.$disconnect();
   }
 };
+
 
 
 
@@ -556,6 +583,7 @@ module.exports = {
   getTotalVisitors,
   getOneToOne,
   getMemberGivenReferences,
+  getMemberReceivedReferences,
   getChapterBusinessGenerated,
   getChapterReferencesCount,
   getChapterVisitorsCount,
