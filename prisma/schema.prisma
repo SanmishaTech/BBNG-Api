@@ -548,6 +548,9 @@ model ThankYouSlip {
   fromMemberId Int?
   fromMember   Member? @relation(fields: [fromMemberId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   
+  // Member who received this thank you slip (optional for backward compatibility)
+  toWhomId    Int?
+  
   // Details
   toWhom      String
   amount      String

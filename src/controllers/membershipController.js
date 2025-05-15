@@ -113,6 +113,30 @@ const getMemberships = asyncHandler(async (req, res) => {
     filters.push({ active: parsedActive });
   }
   
+  // Role-based access control: if user is not admin, show only their memberships
+  if (!req.user.role.includes('admin')) {
+    // Get the member ID associated with the user
+    const member = await prisma.member.findFirst({
+      where: { 
+        users: {
+          id: req.user.id
+        }
+      }
+    });
+    
+    if (member) {
+      filters.push({ memberId: member.id });
+    } else {
+      // If user is not a member and not an admin, return empty results
+      return res.json({
+        memberships: [],
+        page,
+        totalPages: 0,
+        totalMemberships: 0,
+      });
+    }
+  }
+  
   const where = filters.length ? { AND: filters } : {};
 
   const [memberships, total] = await Promise.all([
@@ -297,6 +321,23 @@ const getMembershipById = asyncHandler(async (req, res) => {
   });
   
   if (!membership) throw createError(404, "Membership not found");
+
+  // Role-based access control: regular users can only view their own memberships
+  if (!req.user.role.includes('admin')) {
+    // Get the member ID associated with the logged-in user
+    const userMember = await prisma.member.findFirst({
+      where: { 
+        users: {
+          id: req.user.id
+        }
+      }
+    });
+    
+    // If trying to access another member's data, deny access
+    if (!userMember || userMember.id !== membership.memberId) {
+      throw createError(403, "You are not authorized to view this membership");
+    }
+  }
 
   res.json(membership);
 });
@@ -581,6 +622,23 @@ const getMembershipsByMemberId = asyncHandler(async (req, res) => {
   
   if (!member) {
     throw createError(404, "Member not found");
+  }
+
+  // Role-based access control: regular users can only view their own memberships
+  if (!req.user.role.includes('admin')) {
+    // Get the member ID associated with the logged-in user
+    const userMember = await prisma.member.findFirst({
+      where: { 
+        users: {
+          id: req.user.id
+        }
+      }
+    });
+    
+    // If trying to access another member's data, deny access
+    if (!userMember || userMember.id !== memberId) {
+      throw createError(403, "You are not authorized to view this member's memberships");
+    }
   }
 
   const memberships = await prisma.membership.findMany({

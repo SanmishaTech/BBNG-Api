@@ -166,4 +166,30 @@ router.put("/:id", auth, subCategoryController.updateSubCategory);
  */
 router.delete("/:id", auth, subCategoryController.deleteSubCategory);
 
+/**
+ * @swagger
+ * /subcategories/category/{categoryId}:
+ *   get:
+ *     summary: Get all subcategories for a specific category
+ *     tags: [SubCategories]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: categoryId
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: List of subcategories for the specified category
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/SubCategory'
+ *       404:
+ *         description: Category not found
+ */
+router.get("/category/:categoryId", auth, subCategoryController.getSubCategoriesByCategoryId);
+
 module.exports = router;

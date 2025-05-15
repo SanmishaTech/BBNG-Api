@@ -35,11 +35,7 @@ async function main() {
 
   // Clean up existing data
   await prisma.$transaction([
-    prisma.referenceStatusHistory.deleteMany(),
-    prisma.reference.deleteMany(),
-    prisma.oneToOne.deleteMany(),
-    prisma.transaction.deleteMany(),
-    prisma.meetingAttendance.deleteMany(),
+    // prisma.meetingAttendance.deleteMany(), // Table seems to be missing, please run migrations
     prisma.visitor.deleteMany(),
     prisma.chapterMeeting.deleteMany(),
     prisma.membership.deleteMany(),

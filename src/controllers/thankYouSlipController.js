@@ -102,6 +102,7 @@ const thankYouSlipSchema = z.object({
   }),
   chapterId: z.string().or(z.number()).transform(val => parseInt(val)),
   toWhom: z.string().min(1, 'To Whom is required'),
+  toWhomId: z.string().or(z.number()).transform(val => parseInt(val)).optional(),
   amount: z.string().min(1, 'Amount is required'),
   narration: z.string().min(1, 'Narration is required'),
   testimony: z.string().min(1, 'Testimony is required'),
@@ -118,7 +119,7 @@ exports.createThankYouSlip = async (req, res) => {
       return res.status(400).json({ errors: validatedData });
     }
     
-    const { referenceId, date, chapterId, toWhom, amount, narration, testimony } = validatedData;
+    const { referenceId, date, chapterId, toWhom, toWhomId, amount, narration, testimony } = validatedData;
 
     // Parse date
     const parsedDate = new Date(date);
@@ -189,7 +190,9 @@ exports.createThankYouSlip = async (req, res) => {
     const thankYouSlipData = {
       date: parsedDate,
       chapterId,
+      fromMemberId: member.id,
       toWhom,
+      toWhomId,
       amount,
       narration,
       testimony
@@ -207,6 +210,12 @@ exports.createThankYouSlip = async (req, res) => {
           select: {
             id: true,
             name: true,
+          }
+        },
+        fromMember: {
+          select: {
+            id: true,
+            memberName: true,
           }
         }
       }
@@ -458,9 +467,31 @@ exports.getThankYouSlipById = async (req, res) => {
             id: true,
             name: true,
           }
+        },
+        fromMember: {
+          select: {
+            id: true,
+            memberName: true,
+          }
         }
       }
     });
+
+    // If toWhomId exists, fetch the member data
+    if (thankYouSlip.toWhomId) {
+      const toWhomMember = await prisma.member.findUnique({
+        where: { id: thankYouSlip.toWhomId },
+        select: {
+          id: true,
+          memberName: true,
+        }
+      });
+      
+      // Attach to the response
+      if (toWhomMember) {
+        thankYouSlip.toWhomMember = toWhomMember;
+      }
+    }
 
     // Return the thank you slip with chapter info
     res.status(200).json(thankYouSlip);
