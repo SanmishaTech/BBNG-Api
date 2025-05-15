@@ -225,10 +225,51 @@ const deleteSubCategory = async (req, res, next) => {
   }
 };
 
+/**
+ * @function getSubCategoriesByCategoryId
+ * @description Retrieves all subcategories that belong to a specific category
+ * @param {object} req - Express request object. Expected params: { categoryId: number }.
+ * @param {object} res - Express response object.
+ * @returns {Promise<void>} Sends a JSON response with the subcategories or an error message.
+ */
+const getSubCategoriesByCategoryId = async (req, res, next) => {
+  try {
+    const categoryId = Number(req.params.categoryId);
+    
+    if (isNaN(categoryId)) {
+      return res.status(400).json({
+        errors: { message: "Invalid category ID" }
+      });
+    }
+    
+    // Verify the category exists
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId }
+    });
+    
+    if (!category) {
+      return res.status(404).json({
+        errors: { message: "Category not found" }
+      });
+    }
+    
+    // Get all subcategories for this category
+    const subcategories = await prisma.subCategory.findMany({
+      where: { categoryId },
+      orderBy: { name: 'asc' }
+    });
+    
+    res.json(subcategories);
+  } catch (error) {
+    next(createError(500, "Failed to fetch subcategories", { cause: error }));
+  }
+};
+
 module.exports = {
   getSubCategories,
   getSubCategoryById,
   createSubCategory,
   updateSubCategory,
-  deleteSubCategory
+  deleteSubCategory,
+  getSubCategoriesByCategoryId
 };

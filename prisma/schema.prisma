@@ -353,6 +353,7 @@ model MeetingAttendance {
   memberId Int
 
   isPresent Boolean @default(false)
+  isSubstitute Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -547,6 +548,9 @@ model ThankYouSlip {
   // Member who created this thank you slip (optional for backward compatibility)
   fromMemberId Int?
   fromMember   Member? @relation(fields: [fromMemberId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  
+  // Member who received this thank you slip (optional for backward compatibility)
+  toWhomId    Int?
   
   // Details
   toWhom      String

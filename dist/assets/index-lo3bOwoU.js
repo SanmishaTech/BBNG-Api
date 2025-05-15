@@ -14648,7 +14648,7 @@ function et(e, n) {
   return { ...o, mutate: l, mutateAsync: o.mutate };
 }
 const Km = "BBNG",
-  xO = () => "http://localhost:3000",
+  xO = () => "http://15.207.30.113/",
   Wy = xO();
 var rd = {},
   _N;
@@ -25510,7 +25510,7 @@ const Do = {
         { name: "Membership", url: "/memberships", icon: Oi },
         { name: "Chapter Meetings", url: "/chaptermeetings", icon: zN },
         { name: "References", url: "/references", icon: jm },
-        { name: "My References", url: "/dashboard/references", icon: jm },
+        { name: "My References", url: "/references", icon: jm },
         { name: "Chapter Visitors", url: "/chapter-visitors", icon: v6 },
       ],
       navMain: [
@@ -55086,7 +55086,7 @@ const vK = X.object({
                             t.jsx(te, {
                               type: "button",
                               variant: "outline",
-                              onClick: () => n("/dashboard/references/given"),
+                              onClick: () => n("/references/given"),
                               children: "Cancel",
                             }),
                             t.jsx(te, {
@@ -55198,7 +55198,7 @@ const vK = X.object({
           className: "mb-6",
           children: t.jsxs(te, {
             variant: "outline",
-            onClick: () => n("/dashboard/references/received"),
+            onClick: () => n("/references/received"),
             children: [
               t.jsx(Wm, { className: "mr-2 h-4 w-4" }),
               " Back to References",
@@ -56501,7 +56501,7 @@ const vK = X.object({
               className: "flex gap-4",
               children: [
                 t.jsx(cs, {
-                  to: "/dashboard/references/received",
+                  to: "/references/received",
                   children: t.jsxs(te, {
                     variant: "outline",
                     children: [
@@ -56906,7 +56906,7 @@ const vK = X.object({
             t.jsx("div", {
               className: "flex gap-4",
               children: t.jsx(cs, {
-                to: "/dashboard/references/given",
+                to: "/references/given",
                 children: t.jsxs(te, {
                   variant: "outline",
                   children: [
@@ -56972,7 +56972,7 @@ const vK = X.object({
     const e = St();
     return (
       p.useEffect(() => {
-        e("/dashboard/references/given");
+        e("/references/given");
       }, [e]),
       null
     );
@@ -62799,7 +62799,7 @@ const QK = () => {
                     element: t.jsx(lt, { children: t.jsx(FK, {}) }),
                   }),
                   t.jsx(Je, {
-                    path: "/dashboard/references",
+                    path: "/references",
                     element: t.jsx(lt, { children: t.jsx(NK, {}) }),
                   }),
                   t.jsx(Je, {
@@ -62807,7 +62807,7 @@ const QK = () => {
                     element: t.jsx(lt, { children: t.jsx(zK, {}) }),
                   }),
                   t.jsx(Je, {
-                    path: "/dashboard/references/given",
+                    path: "/references/given",
                     element: t.jsx(lt, { children: t.jsx(jK, {}) }),
                   }),
                   t.jsx(Je, {
@@ -62815,7 +62815,7 @@ const QK = () => {
                     element: t.jsx(lt, { children: t.jsx(IK, {}) }),
                   }),
                   t.jsx(Je, {
-                    path: "/dashboard/references/received",
+                    path: "/references/received",
                     element: t.jsx(lt, { children: t.jsx(wK, {}) }),
                   }),
                   t.jsx(Je, {

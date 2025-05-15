@@ -95,11 +95,13 @@ const getMeetingAttendance = asyncHandler(async (req, res) => {
   const memberAttendance = chapterMembers.map(member => {
     const attendanceRecord = attendanceMap[member.id];
     const isPresent = attendanceRecord?.isPresent || false;
-    console.log(`[getMeetingAttendance] Member ${member.id} (${member.memberName}) attendance: ${isPresent}`);
+    const isSubstitute = attendanceRecord?.isSubstitute || false;
+    console.log(`[getMeetingAttendance] Member ${member.id} (${member.memberName}) attendance: ${isPresent}, substitute: ${isSubstitute}`);
     return {
       member,
       attendance: attendanceRecord || null,
-      isPresent: isPresent
+      isPresent: isPresent,
+      isSubstitute: isSubstitute
     };
   });
 
@@ -122,6 +124,7 @@ const updateBulkAttendance = asyncHandler(async (req, res) => {
       z.object({
         memberId: z.number().int("Member ID must be an integer"),
         isPresent: z.boolean(),
+        isSubstitute: z.boolean().optional().default(false)
       })
     ),
   }).superRefine(async (data, ctx) => {
@@ -164,8 +167,8 @@ const updateBulkAttendance = asyncHandler(async (req, res) => {
 
   // Process each attendance record using upsert for atomic operations
   const results = await Promise.all(
-    attendance.map(async ({ memberId, isPresent }) => {
-      console.log(`[updateBulkAttendance] Upserting attendance for member ${memberId}: isPresent=${isPresent}`);
+    attendance.map(async ({ memberId, isPresent, isSubstitute = false }) => {
+      console.log(`[updateBulkAttendance] Upserting attendance for member ${memberId}: isPresent=${isPresent}, isSubstitute=${isSubstitute}`);
       
       // Check if record exists before upsert
       const existingRecord = await prisma.meetingAttendance.findUnique({
@@ -177,7 +180,7 @@ const updateBulkAttendance = asyncHandler(async (req, res) => {
         }
       });
       
-      console.log(`[updateBulkAttendance] Existing record for member ${memberId}: ${existingRecord ? `isPresent=${existingRecord.isPresent}` : 'not found'}`);
+      console.log(`[updateBulkAttendance] Existing record for member ${memberId}: ${existingRecord ? `isPresent=${existingRecord.isPresent}, isSubstitute=${existingRecord.isSubstitute}` : 'not found'}`);
       
       const result = await prisma.meetingAttendance.upsert({
         where: {
@@ -186,11 +189,11 @@ const updateBulkAttendance = asyncHandler(async (req, res) => {
             memberId,
           },
         },
-        update: { isPresent },
-        create: { meetingId, memberId, isPresent },
+        update: { isPresent, isSubstitute },
+        create: { meetingId, memberId, isPresent, isSubstitute },
       });
       
-      console.log(`[updateBulkAttendance] Result for member ${memberId}: isPresent=${result.isPresent}`);
+      console.log(`[updateBulkAttendance] Result for member ${memberId}: isPresent=${result.isPresent}, isSubstitute=${result.isSubstitute}`);
       return result;
     })
   );
