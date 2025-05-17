@@ -145,6 +145,9 @@ const createOneToOne = async (req, res, next) => {
       return next(createError(400, "Missing required fields"));
     }
 
+    // Convert requestedId to integer for comparison
+    const requestedMemberId = int(requestedId);
+
     // Check if the current user has a corresponding member record
     const member = await prisma.member.findFirst({
       where: { userId: req.user.id }
@@ -152,6 +155,11 @@ const createOneToOne = async (req, res, next) => {
 
     if (!member) {
       return next(createError(400, "Current user does not have a corresponding member record. Cannot create one-to-one meeting."));
+    }
+
+    // Prevent users from creating one-to-one meetings with themselves
+    if (member.id === requestedMemberId) {
+      return next(createError(400, "You cannot create a one-to-one meeting with yourself."));
     }
 
     // Create the one-to-one meeting

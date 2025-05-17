@@ -101,6 +101,18 @@ model Training {
   @@map("trainings")
 }
 
+model State {
+  id          Int      @id @default(autoincrement())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relation to Member
+  members     Member[]
+
+  @@map("states")
+}
+
 model Message {
   id         Int      @id @default(autoincrement())
   heading    String   @db.VarChar(255)
@@ -152,8 +164,11 @@ model Member {
   id                      Int           @id @default(autoincrement())
   memberName              String
   chapterId               Int?
-  chapter                 Chapter?      @relation(fields: [chapterId], references: [id])
-  chapterRoles            ChapterRole[]
+ 
+  chapter                 Chapter? @relation(fields: [chapterId], references: [id])
+  stateId                 Int?
+  state                   State?   @relation(fields: [stateId], references: [id])
+   chapterRoles            ChapterRole[]
   category                String
   businessCategory        String
   gender                  String
