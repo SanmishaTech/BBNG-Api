@@ -60,6 +60,11 @@ const memberSchema = z.object({
     .int()
     .positive("Chapter ID must be a positive integer")
     .optional(),
+  stateId: z
+    .number()
+    .int()
+    .positive("State ID must be a positive integer")
+    .optional(),
   category: z.string().min(1, "Category is required"),
   businessCategory: z.string(),
   gender: z.enum(["male", "female", "other"], {
@@ -138,6 +143,14 @@ const createMember = asyncHandler(async (req, res) => {
       throw createError(400, "Invalid Chapter ID format.");
     }
   }
+  
+  // Parse stateId if it's provided as string
+  if (body.stateId && typeof body.stateId === "string") {
+    body.stateId = parseInt(body.stateId, 10);
+    if (isNaN(body.stateId)) {
+      throw createError(400, "Invalid State ID format.");
+    }
+  }
 
   // Validate request data (including files if any are part of memberSchema)
   // Assuming validateRequest handles req.files appropriately if they are defined in schema
@@ -158,6 +171,7 @@ const createMember = asyncHandler(async (req, res) => {
     dateOfBirth,
     email,
     chapterId, // chapterId is now correctly parsed as number if it was string
+    stateId, // stateId is also correctly parsed as number if it was string
     ...otherValidatedData
   } = parsedData;
 
@@ -269,6 +283,13 @@ const createMember = asyncHandler(async (req, res) => {
       if (chapterId) {
         memberData.chapter = {
           connect: { id: chapterId },
+        };
+      }
+      
+      // Conditionally connect to state
+      if (stateId) {
+        memberData.state = {
+          connect: { id: stateId },
         };
       }
 
@@ -403,6 +424,22 @@ const getMembers = asyncHandler(async (req, res) => {
 
   // Build where clause for filtering
   const where = {};
+  
+  // Exclude current user from results when loading members for one-to-one meetings
+  if (req.query.excludeCurrentUser === 'true' && req.user) {
+    // Get the current user's member ID
+    const currentMember = await prisma.member.findFirst({
+      where: { userId: req.user.id },
+      select: { id: true }
+    });
+    
+    if (currentMember) {
+      where.NOT = {
+        id: currentMember.id
+      };
+    }
+  }
+  
   if (search) {
     where.OR = [
       { memberName: { contains: search } },
@@ -595,7 +632,12 @@ const getMemberById = asyncHandler(async (req, res) => {
             },
           },
         },
-        // Remove the invalid location references
+        state: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         users: {
           select: {
             id: true,
@@ -613,8 +655,15 @@ const getMemberById = asyncHandler(async (req, res) => {
       throw createError(404, "Member not found");
     }
 
-    // Remove sensitive data before sending response
-    const { password, ...sanitizedMember } = member;
+    // Transform state data to match the desired format
+    const { password, state, ...restMember } = member;
+    
+    // Create sanitized member with transformed state data
+    const sanitizedMember = {
+      ...restMember,
+      stateId: state?.id || null,
+      stateName: state?.name || null
+    };
 
     // Calculate expiry status
     const now = new Date();
@@ -734,6 +783,16 @@ const updateMember = asyncHandler(async (req, res) => {
       }
     }
 
+    // Parse stateId if provided
+    if (body.stateId) {
+      if (typeof body.stateId === 'string') {
+        body.stateId = parseInt(body.stateId, 10);
+        if (isNaN(body.stateId)) {
+          throw createError(400, "Invalid State ID format");
+        }
+      }
+    }
+
     // Start transaction to update both member and user
     const result = await prisma.$transaction(async (tx) => {
       // Prepare member update data
@@ -772,6 +831,14 @@ const updateMember = asyncHandler(async (req, res) => {
           connect: { id: body.chapterId },
         };
         delete memberUpdateData.chapterId;
+      }
+
+      // Update state connection if stateId is provided
+      if (body.stateId) {
+        memberUpdateData.state = {
+          connect: { id: body.stateId },
+        };
+        delete memberUpdateData.stateId;
       }
 
       // Update the member record
