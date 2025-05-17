@@ -62,20 +62,20 @@ model Category {
   name        String
   description String
   createdAt   DateTime @default(now())
-   updatedAt   DateTime @updatedAt
- 
+  updatedAt   DateTime @updatedAt
+
   subCategory subCategory[]
- 
+
   @@map("category")
 }
 
 model subCategory {
-  id          Int      @id @default(autoincrement())
-  name        String
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+  id         Int      @id @default(autoincrement())
+  name       String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) // Note: Consider @updatedAt
 
   @@map("subCategory")
 }
@@ -125,7 +125,6 @@ model Message {
   chapterId  Int?
 
   @@index([chapterId])
-
   @@map("messages")
 }
 
@@ -147,29 +146,29 @@ model Chapter {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  members      Member[]
-  packages     Package[] // Added relation to Package model
-  meetings     ChapterMeeting[] // Relation to ChapterMeeting model
-  visitors     Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
-  transactions Transaction[] // Added relation to Transaction model
-  references   Reference[] // Added relation to Reference model
-  oneToOnes    OneToOne[] // Relation to OneToOne model
-  messages     Message[] // Relation to Message model
-  chapterRoles ChapterRole[] // Relation to chapter roles
+  members       Member[]
+  packages      Package[] // Added relation to Package model
+  meetings      ChapterMeeting[] // Relation to ChapterMeeting model
+  visitors      Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
+  transactions  Transaction[] // Added relation to Transaction model
+  references    Reference[] // Added relation to Reference model
+  oneToOnes     OneToOne[] // Relation to OneToOne model
+  messages      Message[] // Relation to Message model
+  chapterRoles  ChapterRole[] // Relation to chapter roles
   thankYouSlips ThankYouSlip[] // Relation to thank you slips
-
 
   @@map("chapters")
 }
 
 model Member {
-  id                      Int      @id @default(autoincrement())
+  id                      Int           @id @default(autoincrement())
   memberName              String
   chapterId               Int?
+ 
   chapter                 Chapter? @relation(fields: [chapterId], references: [id])
   stateId                 Int?
   state                   State?   @relation(fields: [stateId], references: [id])
-  chapterRoles            ChapterRole[]
+   chapterRoles            ChapterRole[]
   category                String
   businessCategory        String
   gender                  String
@@ -186,8 +185,8 @@ model Member {
   orgAddressLine2         String?
   orgLocation             String
   orgPincode              String
-  organizationWebsite     String?  @db.Text
-  organizationDescription String?  @db.Text
+  organizationWebsite     String?       @db.Text
+  organizationDescription String?       @db.Text
 
   addressLine1    String
   location        String
@@ -200,9 +199,9 @@ model Member {
   specificGive String? @db.Text
   clients      String? @db.Text
 
-  profilePicture1 String?
-  profilePicture2 String?
-  profilePicture3 String?
+  profilePicture   String?
+  coverPhoto String?
+  logo String?
   email           String  @unique
   password        String
 
@@ -218,13 +217,13 @@ model Member {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  givenReferences     Reference[] @relation("GivenReferences")
-  receivedReferences  Reference[] @relation("ReceivedReferences")
-  requestedOneToOnes  OneToOne[]  @relation("RequestedOneToOnes")
-  receivedOneToOnes   OneToOne[]  @relation("ReceivedOneToOnes")
-  
+  givenReferences    Reference[] @relation("GivenReferences")
+  receivedReferences Reference[] @relation("ReceivedReferences")
+  requestedOneToOnes OneToOne[]  @relation("RequestedOneToOnes")
+  receivedOneToOnes  OneToOne[]  @relation("ReceivedOneToOnes")
+
   // Thank You Slips sent by this member
-  sentThankYouSlips   ThankYouSlip[]
+  sentThankYouSlips ThankYouSlip[]
 
   // Relation to Zone Roles
   zoneRoles ZoneRole[]
@@ -289,6 +288,9 @@ model Membership {
   bankName     String?
   neftNumber   String?
   utrNumber    String?
+
+  gstNo            String?
+  OrganizationName String?
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -366,7 +368,7 @@ model MeetingAttendance {
   member   Member @relation(fields: [memberId], references: [id])
   memberId Int
 
-  isPresent Boolean @default(false)
+  isPresent    Boolean @default(false)
   isSubstitute Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -449,7 +451,7 @@ model Reference {
 
   // Status history
   statusHistory ReferenceStatusHistory[]
-  
+
   // Thank you slips
   thankYouSlips ThankYouSlip[]
 
@@ -460,146 +462,147 @@ model Reference {
 }
 
 model ReferenceStatusHistory {
-  id          Int      @id @default(autoincrement())
-  date        DateTime
-  status      String
-  comment     String?  @db.Text
-  
+  id      Int      @id @default(autoincrement())
+  date    DateTime
+  status  String
+  comment String?  @db.Text
+
   reference   Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   referenceId Int
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("reference_status_history")
 }
 
 model OneToOne {
-  id          Int      @id @default(autoincrement())
-  date        DateTime
-  
+  id   Int      @id @default(autoincrement())
+  date DateTime
+
   // Member relationships
   requesterId Int
   requestedId Int
   requester   Member @relation(name: "RequestedOneToOnes", fields: [requesterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   requested   Member @relation(name: "ReceivedOneToOnes", fields: [requestedId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
-  // Chapter relationship
-  chapterId   Int
-  chapter     Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
-  remarks     String? @db.Text
-  status      String  @default("pending") // pending, accepted, completed, cancelled
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  @@map("one_to_ones")
- }
-
-model ChapterRole {
-  id        Int      @id @default(autoincrement())
-  roleType  String   // 'chapterHead', 'secretary', 'treasurer', 'guardian', 'districtCoordinator', 'regionalCoordinator'
-  
-  // Member relationship
-  memberId  Int
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
   // Chapter relationship
   chapterId Int
-  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  remarks String? @db.Text
+  status  String  @default("pending") // pending, accepted, completed, cancelled
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("one_to_ones")
+}
+
+model ChapterRole {
+  id       Int    @id @default(autoincrement())
+  roleType String // 'chapterHead', 'secretary', 'treasurer', 'guardian', 'districtCoordinator', 'regionalCoordinator'
+
+  // Member relationship
+  memberId Int
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Chapter relationship
+  chapterId Int
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
   // History relationship
-  history   ChapterRoleHistory[] // Relation to role history
-  
+  history ChapterRoleHistory[] // Relation to role history
+
   assignedAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  
+
   @@unique([chapterId, roleType])
   @@map("chapter_roles")
 }
 
 model ChapterRoleHistory {
-  id        Int      @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // Related role
-  roleId    Int
-  role      ChapterRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
+  roleId Int
+  role   ChapterRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
   // Member who held the role
-  memberId  Int
-  
+  memberId Int
+
   // Action performed (assigned, removed)
-  action    String
-  
+  action String
+
   // User who made the change
-  performedById Int? // ID of the user who made the change
+  performedById   Int? // ID of the user who made the change
   performedByName String? // Name of the user who made the change (in case user record is deleted)
-  
+
   // Chapter information for easier querying
   chapterId Int
   roleType  String
-  
+
   // Timestamps
-  startDate DateTime @default(now()) // When this record became active
+  startDate DateTime  @default(now()) // When this record became active
   endDate   DateTime? // When this record was replaced (null if current)
-  
+
   @@map("chapter_role_history")
 }
 
 model ThankYouSlip {
-  id          Int      @id @default(autoincrement())
-  date        DateTime
-  
+  id   Int      @id @default(autoincrement())
+  date DateTime
+
   // Reference relationship (optional for direct thank you slips)
   referenceId Int?
   reference   Reference? @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
+
   // Chapter relationship
-  chapterId   Int
-  chapter     Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
+  chapterId Int
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
   // Member who created this thank you slip (optional for backward compatibility)
   fromMemberId Int?
   fromMember   Member? @relation(fields: [fromMemberId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  
+
   // Member who received this thank you slip (optional for backward compatibility)
-  toWhomId    Int?
-  
+  toWhomId Int?
+
   // Details
-  toWhom      String
-  amount      String
-  narration   String   @db.Text
-  testimony   String   @db.Text
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  toWhom    String
+  amount    String
+  narration String @db.Text
+  testimony String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("thank_you_slips")
 }
 
 model Statistics {
-  id                Int       @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   businessGenerated Decimal
   referenceShared   Int
   totalVisitors     Int
-  date              DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  date              DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("statistics")
 }
+
 model ZoneRole {
-  id        Int      @id @default(autoincrement())
-  roleType  String   // "Regional Director", "Joint Secretary"
+  id       Int    @id @default(autoincrement())
+  roleType String // "Regional Director", "Joint Secretary"
 
-  memberId  Int
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  memberId Int
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  zoneId    Int
-  zone      Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  zoneId Int
+  zone   Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  history   ZoneRoleHistory[] // Relation to role history
+  history ZoneRoleHistory[] // Relation to role history
 
   assignedAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -609,25 +612,25 @@ model ZoneRole {
 }
 
 model ZoneRoleHistory {
-  id        Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  roleId    Int
-  role      ZoneRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  roleId Int
+  role   ZoneRole @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // Denormalized fields for historical record integrity
-  memberId  Int      // Member who held the role
-  zoneId    Int      // Zone where role was held
-  roleType  String   // Type of role
+  memberId Int // Member who held the role
+  zoneId   Int // Zone where role was held
+  roleType String // Type of role
 
-  action    String   // e.g., "assigned", "removed", "replaced"
+  action String // e.g., "assigned", "removed", "replaced"
 
   // User who made the change
-  performedById   Int?   // ID of the user who made the change (links to User model)
-  performedBy     User?  @relation("UserPerformedZoneRoleHistory", fields: [performedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  performedById   Int? // ID of the user who made the change (links to User model)
+  performedBy     User?   @relation("UserPerformedZoneRoleHistory", fields: [performedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
   performedByName String? // Name of the user (backup in case User record is modified/deleted)
 
-  startDate DateTime @default(now()) // When this history record became active (role assigned/changed)
-  endDate   DateTime?             // When this role assignment ended (null if current)
+  startDate DateTime  @default(now()) // When this history record became active (role assigned/changed)
+  endDate   DateTime? // When this role assignment ended (null if current)
 
   @@map("zone_role_history")
 }

@@ -32,6 +32,7 @@ const oneToOneRoutes = require("./routes/oneToOneRoutes");
 const chapterRoleRoutes = require("./routes/chapterRoles");
 const subCategoryRoutes = require("./routes/subCategory");
 const statisticsRoutes = require("./routes/statistics");
+const powerTeamRoutes = require("./routes/powerTeamRoutes");
 
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
@@ -120,6 +121,7 @@ app.use("/api/one-to-ones", oneToOneRoutes);
 app.use("/api/thankyou-slips", thankYouSlipRoutes);
 app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/chapter-roles", chapterRoleRoutes);
+app.use("/api/powerteams", powerTeamRoutes);
 app.use(swaggerRouter);
 
 app.get("*", (req, res, next) => {

@@ -14648,7 +14648,7 @@ function et(e, n) {
   return { ...o, mutate: l, mutateAsync: o.mutate };
 }
 const Km = "BBNG",
-  xO = () => "http://15.207.30.113/",
+  xO = () => "http://localhost:3000/",
   Wy = xO();
 var rd = {},
   _N;
@@ -27603,7 +27603,7 @@ const zM = {
     typeof WorkerGlobalScope < "u" &&
     self instanceof WorkerGlobalScope &&
     typeof self.importScripts == "function",
-  V9 = (Gb && window.location.href) || "http://15.207.30.113",
+  V9 = (Gb && window.location.href) || "http://localhost:3000",
   H9 = Object.freeze(
     Object.defineProperty(
       {
@@ -48867,7 +48867,7 @@ const WY = ({
           })
       : n;
   },
-  JY = "http://15.207.30.113";
+  JY = "http://localhost:3000";
 function aR({ mode: e }) {
   const { id: n } = us(),
     s = St(),
@@ -50118,7 +50118,7 @@ const eK = () =>
           })
       : n;
   },
-  sK = "http://15.207.30.113";
+  sK = "http://localhost:3000";
 function rK({ mode: e }) {
   var S;
   const n =
@@ -61452,10 +61452,10 @@ const QK = () => {
               id: j.id.toString(),
               name: j.memberName,
               profilePicture: j.profilePicture1
-                ? `http://15.207.30.113/uploads/members/${j.profilePicture1}`
+                ? `http://localhost:3000/uploads/members/${j.profilePicture1}`
                 : "https://via.placeholder.com/100",
               coverPhoto: j.profilePicture2
-                ? `http://15.207.30.113/uploads/members/${j.profilePicture2}`
+                ? `http://localhost:3000/uploads/members/${j.profilePicture2}`
                 : void 0,
               email: j.email,
               phone: j.mobile1,
@@ -62439,10 +62439,10 @@ const QK = () => {
               id: S.id.toString(),
               name: S.memberName,
               profilePicture: S.profilePicture1
-                ? `http://15.207.30.113/uploads/members/${S.profilePicture1}`
+                ? `http://localhost:3000/uploads/members/${S.profilePicture1}`
                 : "https://via.placeholder.com/100",
               coverPhoto: S.profilePicture2
-                ? `http://15.207.30.113/uploads/members/${S.profilePicture2}`
+                ? `http://localhost:3000/uploads/members/${S.profilePicture2}`
                 : "https://images.unsplash.com/photo-1614850523459-c2f4c699c6b2?auto=format&fit=crop&w=1470&h=400",
               email: S.email,
               phone: S.mobile1,

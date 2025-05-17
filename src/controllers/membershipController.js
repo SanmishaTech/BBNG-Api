@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
-const { addMonths, subDays } = require("date-fns");
+const { addMonths, subDays, getMonth, getYear, setMonth, setDate, setYear } = require("date-fns");
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -56,6 +56,35 @@ const getFinancialYearCode = (date = new Date()) => {
   
   // Return FY format like "FY23-24" (last two digits of each year)
   return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
+};
+
+/**
+ * Calculate the financial year end date based on a given date
+ * Financial year in India ends on March 31st
+ * If the given date is past March, return next year's March 30th
+ * If the given date is before or in March, return current year's March 30th
+ */
+const getFinancialYearEndDate = (date = new Date()) => {
+  const currentMonth = date.getMonth(); // 0-11 (0 = January, 2 = March)
+  const currentYear = date.getFullYear();
+  
+  let expiryYear;
+  
+  // If we're past March (month 2), set expiry to next year's March
+  if (currentMonth > 2) {
+    expiryYear = currentYear + 1;
+  } else {
+    // Otherwise set it to current year's March
+    expiryYear = currentYear;
+  }
+  
+  // Create a new date set to March 30th of the target year
+  const expiryDate = new Date(date);
+  expiryDate.setFullYear(expiryYear);
+  expiryDate.setMonth(2); // March (0-indexed)
+  expiryDate.setDate(30); // 30th day
+  
+  return expiryDate;
 };
 
 /**
@@ -245,8 +274,9 @@ const createMembership = asyncHandler(async (req, res) => {
     }
   }
 
-  // Calculate the package end date (packageStartDate + periodMonths - 1 day)
-  packageEndDate = subDays(addMonths(packageStartDate, packageData.periodMonths), 1);
+  // Calculate the package end date using financial year logic
+  // Regardless of package duration, we set expiry to March 30th of appropriate financial year
+  packageEndDate = getFinancialYearEndDate(packageStartDate);
 
   // Calculate GST amounts and total fees
   const basicFees = parseFloat(req.body.basicFees);

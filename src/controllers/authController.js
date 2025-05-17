@@ -10,6 +10,35 @@ const createError = require("http-errors");
 const jwtConfig = require("../config/jwt");
 const { SUPER_ADMIN } = require("../config/roles");
 
+// Helper function to get user's chapter roles
+const getUserChapterRoles = async (userId) => {
+  try {
+    const member = await prisma.member.findUnique({
+      where: { userId },
+      include: {
+        chapterRoles: {
+          select: {
+            roleType: true,
+            chapterId: true,
+          },
+        },
+      },
+    });
+
+    if (member && member.chapterRoles) {
+      return member.chapterRoles.map(role => ({ 
+        role: role.roleType, 
+        chapterId: role.chapterId 
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching user chapter roles:", error);
+    // Depending on how you want to handle errors, you might throw it or return an empty array
+    return []; 
+  }
+};
+
 // Register a new user
 const register = async (req, res, next) => {
   if (process.env.ALLOW_REGISTRATION !== "true") {
@@ -92,6 +121,13 @@ const login = async (req, res, next) => {
           },
         },
         chapter: true,
+        // Eager load chapterRoles for the member to be used by getUserChapterRoles if called through member path
+        chapterRoles: {
+          select: {
+            roleType: true,
+            chapterId: true,
+          }
+        }
       },
     });
 
@@ -106,7 +142,7 @@ const login = async (req, res, next) => {
 
       console.log("Member found:", password, member.users.password);
       // Compare password with the user's password (not member's password)
-      const isValidPassword = await bcrypt.compare(password, member.password);
+      const isValidPassword = await bcrypt.compare(password, member.users.password);
       console.log("Password match:", isValidPassword);
       if (!isValidPassword) {
         return res
@@ -177,12 +213,16 @@ const login = async (req, res, next) => {
       const { password: memberPass, ...memberWithoutPassword } = member;
       const { password: userPass, ...userWithoutPassword } = member.users;
 
+      // Get other chapter roles
+      const otherChapterRoles = await getUserChapterRoles(member.users.id);
+
       return res.json({
         token,
         user: {
           ...userWithoutPassword,
           member: memberWithoutPassword,
           isMember: true,
+          otherChapterRoles, // Add this line
         },
       });
     }
@@ -231,13 +271,18 @@ const login = async (req, res, next) => {
       data: { lastLogin: new Date() },
     });
 
+    // Get other chapter roles if the user is linked to a member
+    let otherChapterRoles = [];
+    if (user.memberId) { // Check if the user is associated with a member record
+      // We need the actual member record to fetch chapterRoles, so we query member by user.id
+      // This assumes user.id is the foreign key in the Member table (as per schema: Member.userId)
+      otherChapterRoles = await getUserChapterRoles(user.id);
+    }
+
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
-    res.json({
-      token,
-      user: { ...userWithoutPassword, isMember: false },
-    });
+    return res.json({ token, user: { ...userWithoutPassword, otherChapterRoles } }); // Add otherChapterRoles here
   } catch (error) {
     next(error);
   }
