@@ -27,14 +27,14 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
   // Create a storage object for multer
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      // Get the field name (e.g., profilePicture1)
+      // Get the field name (e.g., profilePicture)
       const fieldName = file.fieldname;
       // Generate a UUID for this upload
       const uuid = uuidv4();
       // Store the UUID on the request for later use
       req.fileUUID = req.fileUUID || {};
       req.fileUUID[fieldName] = uuid;
-      // Construct the full path: uploads/members/profilePicture1/UUID/
+      // Construct the full path: uploads/members/profilePicture/UUID/
       const fullPath = path.join(uploadDir, moduleName, fieldName, uuid);
 
       // Create directory if it doesn't exist
@@ -56,7 +56,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
   const safeModuleName = moduleName.replace(/[^a-zA-Z0-9_-]/g, "_");
   if (safeModuleName !== moduleName) {
     console.warn(
-      `Original moduleName "${moduleName}" sanitized to "${safeModuleName}" for directory usage.`
+      `Original moduleName "${moduleName}" sanitized to "${safeModuleName}" for directory usage.`,
     );
   }
   moduleName = safeModuleName; // Use the sanitized version
@@ -74,8 +74,8 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
     ) {
       throw new Error(
         `Invalid configuration for field: ${JSON.stringify(
-          field
-        )}. Ensure 'name' (string), 'allowedTypes' (array), and 'maxSize' (number) are provided.`
+          field,
+        )}. Ensure 'name' (string), 'allowedTypes' (array), and 'maxSize' (number) are provided.`,
       );
     }
     acc[field.name] = {
@@ -95,13 +95,13 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
 
     if (!requestUUID || !requestModuleName) {
       console.warn(
-        `[Cleanup] Cannot proceed: Missing requestUUID (${requestUUID}) or requestModuleName (${requestModuleName}) on req.`
+        `[Cleanup] Cannot proceed: Missing requestUUID (${requestUUID}) or requestModuleName (${requestModuleName}) on req.`,
       );
       return;
     }
 
     console.log(
-      `[Cleanup:${requestUUID}] Attempting cleanup for module '${requestModuleName}' and UUID '${requestUUID}'.`
+      `[Cleanup:${requestUUID}] Attempting cleanup for module '${requestModuleName}' and UUID '${requestUUID}'.`,
     );
 
     let cleanupFailed = false;
@@ -115,7 +115,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
         uploadDir,
         requestModuleName,
         fieldname,
-        requestUUID
+        requestUUID,
       );
 
       try {
@@ -127,13 +127,13 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
         // Use fs.rm with recursive option to remove the UUID directory and its contents for this field
         await fsPromises.rm(targetDir, { recursive: true, force: true }); // force:true suppresses ENOENT errors
         console.log(
-          `[Cleanup:${requestUUID}] Successfully checked/removed directory: ${targetDir}`
+          `[Cleanup:${requestUUID}] Successfully checked/removed directory: ${targetDir}`,
         );
       } catch (err) {
         // Even with force:true, other errors (like permissions) might occur.
         console.error(
           `[Cleanup:${requestUUID}] Failed to remove directory ${targetDir}:`,
-          err
+          err,
         );
         cleanupFailed = true;
       }
@@ -215,7 +215,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
           req.uploadErrors[fieldname].push({
             type: "invalid_type",
             message: `Invalid file type for field '${fieldname}'. Allowed: ${config.types.join(
-              ", "
+              ", ",
             )}. Received: ${fileMimeType || "N/A"}`,
             filename: file.originalname,
             receivedType: fileMimeType,
@@ -233,7 +233,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
               1024 /
               1024
             ).toFixed(2)} MB. Received: ${(file.size / 1024 / 1024).toFixed(
-              2
+              2,
             )} MB`,
             filename: file.originalname,
             maxSize: config.maxSize,
@@ -253,7 +253,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
         // Avoid adding duplicate messages if already added above
         if (
           !req.uploadErrors[receivedFieldname].some(
-            (e) => e.type === "unexpected_field"
+            (e) => e.type === "unexpected_field",
           )
         ) {
           req.uploadErrors[receivedFieldname].push({
@@ -268,7 +268,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
     // --- Cleanup Logic (within validation) ---
     if (hasValidationErrors) {
       console.log(
-        `[Validation:${req.uploadUUID}] Validation errors detected. Triggering cleanup.`
+        `[Validation:${req.uploadUUID}] Validation errors detected. Triggering cleanup.`,
       );
       try {
         // Use await here as cleanupRequestUploads is async
@@ -276,7 +276,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
       } catch (cleanupErr) {
         console.error(
           `[Validation:${req.uploadUUID}] Error during post-validation cleanup:`,
-          cleanupErr
+          cleanupErr,
         );
         req.uploadErrors["general"] = req.uploadErrors["general"] || [];
         if (
@@ -319,12 +319,12 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
           .catch((cleanupErr) => {
             console.error(
               `[Multer Error:${requestUUID}] Error during cleanup after Multer error:`,
-              cleanupErr
+              cleanupErr,
             );
             req.uploadErrors["general"] = req.uploadErrors["general"] || [];
             if (
               !req.uploadErrors["general"].some(
-                (e) => e.type === "cleanup_error"
+                (e) => e.type === "cleanup_error",
               )
             ) {
               req.uploadErrors["general"].push({
@@ -339,7 +339,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
           });
       } else {
         console.warn(
-          `[Multer Error:${requestUUID}] req.cleanupUpload not found when handling Multer error.`
+          `[Multer Error:${requestUUID}] req.cleanupUpload not found when handling Multer error.`,
         );
         next();
       }
@@ -361,12 +361,12 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
           .catch((cleanupErr) => {
             console.error(
               `[Upload Setup Error:${requestUUID}] Error during cleanup after setup error:`,
-              cleanupErr
+              cleanupErr,
             );
             req.uploadErrors["general"] = req.uploadErrors["general"] || [];
             if (
               !req.uploadErrors["general"].some(
-                (e) => e.type === "cleanup_error"
+                (e) => e.type === "cleanup_error",
               )
             ) {
               req.uploadErrors["general"].push({
@@ -381,7 +381,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
           });
       } else {
         console.warn(
-          `[Upload Setup Error:${requestUUID}] req.cleanupUpload not found when handling setup error.`
+          `[Upload Setup Error:${requestUUID}] req.cleanupUpload not found when handling setup error.`,
         );
         next();
       }
@@ -405,7 +405,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
       req.cleanupUpload = cleanupRequestUploads;
 
       console.log(
-        `[Request Init:${req.uploadUUID}] Setup complete for module '${req.uploadModuleName}'.`
+        `[Request Init:${req.uploadUUID}] Setup complete for module '${req.uploadModuleName}'.`,
       );
       next();
     },
@@ -414,13 +414,13 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
     (req, res, next) => {
       const requestUUID = req.uploadUUID; // Grab for logging context
       console.log(
-        `[Multer Start:${requestUUID}] Applying Multer middleware...`
+        `[Multer Start:${requestUUID}] Applying Multer middleware...`,
       );
       multerMiddleware(req, res, (err) => {
         // This callback catches errors *from* the multer processing (like limits before file save completion, disk errors)
         if (err) {
           console.log(
-            `[Multer Error Caught:${requestUUID}] Passing error to Multer error handler.`
+            `[Multer Error Caught:${requestUUID}] Passing error to Multer error handler.`,
           );
           // Pass the error to our dedicated handler
           return handleMulterErrors(err, req, res, next);
@@ -432,7 +432,7 @@ const createUploadMiddleware = (moduleName, fields, uploadDir = "uploads") => {
             ? Object.keys(req.files)
                 .map((k) => `${k}: ${req.files[k].length}`)
                 .join(", ")
-            : "None"
+            : "None",
         );
         // Log the actual file paths for verification
         if (req.files) {

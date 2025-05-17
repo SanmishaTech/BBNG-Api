@@ -17,18 +17,18 @@ const createUploadMiddleware = require("../middleware/uploadMiddleware");
 // Initialize upload middleware for member profile pictures
 const uploadMiddleware = createUploadMiddleware("members", [
   {
-    name: "profilePicture1",
+    name: "profilePicture",
     allowedTypes: ["image/jpeg", "image/png"],
     maxSize: 5 * 1024 * 1024, // 5MB
   },
 
   {
-    name: "profilePicture2",
+    name: "coverPhoto",
     allowedTypes: ["image/jpeg", "image/png"],
     maxSize: 5 * 1024 * 1024, // 5MB
   },
   {
-    name: "profilePicture3",
+    name: "logo",
     allowedTypes: ["image/jpeg", "image/png"],
     maxSize: 5 * 1024 * 1024, // 5MB
   },
@@ -125,13 +125,13 @@ const memberController = require("../controllers/memberController");
  *           type: string
  *         clients:
  *           type: string
- *         profilePicture1:
+ *         profilePicture:
  *           type: string
  *           format: binary
- *         profilePicture2:
+ *         coverPhoto:
  *           type: string
  *           format: binary
- *         profilePicture3:
+ *         logo:
  *           type: string
  *           format: binary
  *         email:
@@ -358,13 +358,13 @@ router.get("/", auth, memberController.getMembers);
  *                 type: string
  *               clients:
  *                 type: string
- *               profilePicture1:
+ *               profilePicture:
  *                 type: string
  *                 format: binary
- *               profilePicture2:
+ *               coverPhoto:
  *                 type: string
  *                 format: binary
- *               profilePicture3:
+ *               logo:
  *                 type: string
  *                 format: binary
  *               email:
@@ -486,13 +486,13 @@ router.delete("/:id", auth, memberController.deleteMember);
  *           schema:
  *             type: object
  *             properties:
- *               profilePicture1:
+ *               profilePicture:
  *                 type: string
  *                 format: binary
- *               profilePicture2:
+ *               coverPhoto:
  *                 type: string
  *                 format: binary
- *               profilePicture3:
+ *               logo:
  *                 type: string
  *                 format: binary
  *     responses:

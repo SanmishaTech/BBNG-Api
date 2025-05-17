@@ -20,7 +20,7 @@ const validateRequest = async (schema, data, files = {}) => {
     }
 
     // Clean up empty profile picture objects from JSON data
-    ["profilePicture1", "profilePicture2", "profilePicture3"].forEach(
+    ["profilePicture", "coverPhoto", "logo"].forEach(
       (field) => {
         if (parsedData[field] && Object.keys(parsedData[field]).length === 0) {
           delete parsedData[field];
@@ -30,7 +30,7 @@ const validateRequest = async (schema, data, files = {}) => {
 
     // Handle file uploads if present
     if (files) {
-      ["profilePicture1", "profilePicture2", "profilePicture3"].forEach(
+      ["profilePicture", "coverPhoto", "logo"].forEach(
         (field) => {
           if (files[field] && files[field][0]) {
             // Get the UUID from the file path

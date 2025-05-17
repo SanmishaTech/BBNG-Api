@@ -74,7 +74,7 @@ const memberSchema = z.object({
     .string()
     .refine(
       (val) => !isNaN(new Date(val).getTime()),
-      "Invalid date format for Date of Birth"
+      "Invalid date format for Date of Birth",
     ),
   mobile1: z
     .string()
@@ -93,8 +93,11 @@ const memberSchema = z.object({
     .max(15, "Organization mobile number must be at most 15 digits")
     .optional(),
   organizationLandlineNo: z.string().optional(),
-  organizationEmail: z.preprocess(val => val === "" ? undefined : val, z.string().email().optional()),
-  
+  organizationEmail: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().email().optional(),
+  ),
+
   orgAddressLine1: z.string().optional(),
   orgAddressLine2: z.string().optional(),
   orgLocation: z.string().optional(),
@@ -103,11 +106,11 @@ const memberSchema = z.object({
     .min(6, "Organization pincode must be 6 digits")
     .max(6, "Organization pincode must be 6 digits")
     .optional(),
-  organizationWebsite: z
-    .preprocess(
-      (val) => (val && typeof val === 'string' && val.trim() !== '' ? val : undefined),
-      z.string().url("Invalid organization website URL").optional()
-    ),
+  organizationWebsite: z.preprocess(
+    (val) =>
+      val && typeof val === "string" && val.trim() !== "" ? val : undefined,
+    z.string().url("Invalid organization website URL").optional(),
+  ),
 
   organizationDescription: z.string().optional(),
   addressLine1: z.string().optional(),
@@ -121,11 +124,17 @@ const memberSchema = z.object({
   specificAsk: z.string().optional(),
   specificGive: z.string().optional(),
   clients: z.string().optional(),
-  profilePicture1: z.string().optional(),
-  profilePicture2: z.string().optional(),
-  profilePicture3: z.string().optional(),
-  email: z.preprocess(val => val === "" ? undefined : val, z.string().email().optional()),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  profilePicture: z.string().optional(),
+  coverPhoto: z.string().optional(),
+  logo: z.string().optional(),
+  email: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().email().optional(),
+  ),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .optional(),
   // verifyPassword is not in the schema but was in the original destructuring.
   // If it's part of the form for confirmation, it should be in the schema or handled before validation.
 });
@@ -146,7 +155,7 @@ const createMember = asyncHandler(async (req, res) => {
       throw createError(400, "Invalid Chapter ID format.");
     }
   }
-  
+
   // Parse stateId if it's provided as string
   if (body.stateId && typeof body.stateId === "string") {
     body.stateId = parseInt(body.stateId, 10);
@@ -161,7 +170,7 @@ const createMember = asyncHandler(async (req, res) => {
 
   // If validateRequest returns validation errors (an object of field errors), return them
   const fieldErrors = Object.entries(parsedData).filter(
-    ([, v]) => v && typeof v === "object" && v.type === "validation"
+    ([, v]) => v && typeof v === "object" && v.type === "validation",
   );
   if (fieldErrors.length > 0) {
     const errors = Object.fromEntries(fieldErrors);
@@ -197,14 +206,14 @@ const createMember = asyncHandler(async (req, res) => {
                   path.join(
                     __dirname,
                     "../../../uploads/members",
-                    file.filename
-                  )
+                    file.filename,
+                  ),
                 );
                 console.log(`Cleaned up file: ${file.filename}`);
               } catch (error) {
                 console.error(
                   `Error deleting file ${file.filename} during cleanup:`,
-                  error
+                  error,
                 );
               }
             }
@@ -246,7 +255,7 @@ const createMember = asyncHandler(async (req, res) => {
         // This should ideally be caught by Zod, but double-check
         throw createError(
           400,
-          "Invalid date format for date of birth. Please use YYYY-MM-DD or a valid date string."
+          "Invalid date format for date of birth. Please use YYYY-MM-DD or a valid date string.",
         );
       }
 
@@ -275,7 +284,7 @@ const createMember = asyncHandler(async (req, res) => {
               "members",
               key,
               uuid,
-              file.originalname
+              file.originalname,
             );
             memberData[key] = fullPath; // Store the complete path
           }
@@ -288,7 +297,7 @@ const createMember = asyncHandler(async (req, res) => {
           connect: { id: chapterId },
         };
       }
-      
+
       // Conditionally connect to state
       if (stateId) {
         memberData.state = {
@@ -369,16 +378,16 @@ const createMember = asyncHandler(async (req, res) => {
                   path.join(
                     __dirname,
                     "../../../uploads/members",
-                    file.filename
-                  )
+                    file.filename,
+                  ),
                 );
                 console.log(
-                  `Cleaned up file on transaction error: ${file.filename}`
+                  `Cleaned up file on transaction error: ${file.filename}`,
                 );
               } catch (cleanupError) {
                 console.error(
                   `Error deleting file ${file.filename} during transaction error cleanup:`,
-                  cleanupError
+                  cleanupError,
                 );
               }
             }
@@ -398,7 +407,7 @@ const createMember = asyncHandler(async (req, res) => {
       throw createError(
         400,
         `A record with this ${field} already exists. Transaction rolled back.`,
-        { expose: true }
+        { expose: true },
       );
     }
     if (!error.status) {
@@ -407,7 +416,7 @@ const createMember = asyncHandler(async (req, res) => {
       throw createError(
         500,
         error.message ||
-          "Failed to create member and user account due to a server error."
+          "Failed to create member and user account due to a server error.",
       );
     }
     throw error; // rethrow if already an HttpError or for asyncHandler to process
@@ -427,22 +436,22 @@ const getMembers = asyncHandler(async (req, res) => {
 
   // Build where clause for filtering
   const where = {};
-  
+
   // Exclude current user from results when loading members for one-to-one meetings
-  if (req.query.excludeCurrentUser === 'true' && req.user) {
+  if (req.query.excludeCurrentUser === "true" && req.user) {
     // Get the current user's member ID
     const currentMember = await prisma.member.findFirst({
       where: { userId: req.user.id },
-      select: { id: true }
+      select: { id: true },
     });
-    
+
     if (currentMember) {
       where.NOT = {
-        id: currentMember.id
+        id: currentMember.id,
       };
     }
   }
-  
+
   if (search) {
     where.OR = [
       { memberName: { contains: search } },
@@ -457,7 +466,7 @@ const getMembers = asyncHandler(async (req, res) => {
   } else if (active === "false") {
     where.active = false;
   }
-  
+
   // Filter by chapter if chapterId is provided
   if (chapterId) {
     where.chapterId = chapterId;
@@ -557,8 +566,8 @@ const getMembers = asyncHandler(async (req, res) => {
           .catch((err) =>
             console.error(
               `Failed to update user status for member ${member.id}:`,
-              err
-            )
+              err,
+            ),
           );
       }
 
@@ -660,12 +669,12 @@ const getMemberById = asyncHandler(async (req, res) => {
 
     // Transform state data to match the desired format
     const { password, state, ...restMember } = member;
-    
+
     // Create sanitized member with transformed state data
     const sanitizedMember = {
       ...restMember,
       stateId: state?.id || null,
-      stateName: state?.name || null
+      stateName: state?.name || null,
     };
 
     // Calculate expiry status
@@ -708,8 +717,8 @@ const getMemberById = asyncHandler(async (req, res) => {
         .catch((err) =>
           console.error(
             `Failed to update user status for member ${member.id}:`,
-            err
-          )
+            err,
+          ),
         );
     }
 
@@ -788,7 +797,7 @@ const updateMember = asyncHandler(async (req, res) => {
 
     // Parse stateId if provided
     if (body.stateId) {
-      if (typeof body.stateId === 'string') {
+      if (typeof body.stateId === "string") {
         body.stateId = parseInt(body.stateId, 10);
         if (isNaN(body.stateId)) {
           throw createError(400, "Invalid State ID format");
@@ -813,7 +822,7 @@ const updateMember = asyncHandler(async (req, res) => {
               "members",
               key,
               uuid,
-              file.originalname
+              file.originalname,
             );
             memberUpdateData[key] = fullPath; // Store the complete path
           }
@@ -824,7 +833,7 @@ const updateMember = asyncHandler(async (req, res) => {
       if (memberUpdateData.password) {
         memberUpdateData.password = await bcrypt.hash(
           memberUpdateData.password,
-          10
+          10,
         );
       }
 
@@ -913,13 +922,13 @@ const updateMember = asyncHandler(async (req, res) => {
                   path.join(
                     __dirname,
                     "../../../uploads/members",
-                    file.filename
-                  )
+                    file.filename,
+                  ),
                 );
               } catch (cleanupError) {
                 console.error(
                   `Error deleting file ${file.filename} during cleanup:`,
-                  cleanupError
+                  cleanupError,
                 );
               }
             }
@@ -981,9 +990,9 @@ const deleteMember = asyncHandler(async (req, res) => {
 
     // After successful database deletion, clean up any uploaded files
     const profilePictures = [
-      existingMember.profilePicture1,
-      existingMember.profilePicture2,
-      existingMember.profilePicture3,
+      existingMember.profilePicture,
+      existingMember.coverPhoto,
+      existingMember.logo,
     ].filter(Boolean); // Remove null/undefined values
 
     // Delete the profile pictures if they exist
@@ -1307,9 +1316,9 @@ const searchMembers = async (req, res, next) => {
         email: true,
         mobile1: true,
         mobile2: true,
-        profilePicture1: true,
-        profilePicture2: true,
-        profilePicture3: true,
+        profilePicture: true,
+        coverPhoto: true,
+        logo: true,
         category: true,
         chapterId: true,
         chapter: true,
@@ -1353,10 +1362,10 @@ const getCurrentMemberProfile = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ errors: { message: "Not authenticated" } });
     }
-    
+
     const userId = req.user.id;
     console.log(`Getting member profile for user ID: ${userId}`);
-    
+
     // Find member profile for current user
     const member = await prisma.member.findFirst({
       where: { userId },
@@ -1367,14 +1376,14 @@ const getCurrentMemberProfile = async (req, res) => {
         chapterId: true,
         email: true,
         mobile1: true, // Changed from phoneNumber to mobile1 based on your schema
-        profilePicture1: true,
+        profilePicture: true,
         chapter: {
           select: {
             id: true,
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
     });
 
     // Log what we found for debugging
@@ -1385,14 +1394,18 @@ const getCurrentMemberProfile = async (req, res) => {
     }
 
     if (!member) {
-      return res.status(404).json({ errors: { message: "Member profile not found for current user" } });
+      return res.status(404).json({
+        errors: { message: "Member profile not found for current user" },
+      });
     }
 
     // Return the member profile
     res.status(200).json({ member });
   } catch (error) {
-    console.error('Error getting member profile:', error);
-    res.status(500).json({ errors: { message: "Failed to get member profile" } });
+    console.error("Error getting member profile:", error);
+    res
+      .status(500)
+      .json({ errors: { message: "Failed to get member profile" } });
   }
 };
 
@@ -1403,9 +1416,9 @@ module.exports = {
   updateMember,
   deleteMember,
   updateProfilePictures, // Based on file summary
-  deleteProfilePicture,  // Based on file summary
+  deleteProfilePicture, // Based on file summary
   getProfilePicture,
   getMemberDetailsForReference,
   searchMembers,
-  getCurrentMemberProfile
+  getCurrentMemberProfile,
 };

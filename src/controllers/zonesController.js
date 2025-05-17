@@ -376,7 +376,7 @@ exports.getZoneRoles = asyncHandler(async (req, res) => {
               id: true,
               memberName: true,
               organizationName: true,
-              profilePicture1: true,
+              profilePicture: true,
             },
           },
         },
@@ -398,7 +398,7 @@ exports.getZoneRoles = asyncHandler(async (req, res) => {
     memberId: role.memberId,
     memberName: role.member.memberName,
     organizationName: role.member.organizationName,
-    profilePicture1: role.member.profilePicture1,
+    profilePicture: role.member.profilePicture,
     assignedAt: role.assignedAt
   }));
 
