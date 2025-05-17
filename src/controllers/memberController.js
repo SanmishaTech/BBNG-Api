@@ -762,14 +762,13 @@ const updateMember = asyncHandler(async (req, res) => {
     // Handle request body
     const body = { ...req.body };
 
-    // Convert dateOfBirth to dateOfBirth if it exists
+    // Convert and validate dateOfBirth if it exists
     if (body.dateOfBirth) {
       const dateOfBirth = new Date(body.dateOfBirth);
       if (isNaN(dateOfBirth.getTime())) {
         throw createError(400, "Invalid date format for date of birth");
       }
       body.dateOfBirth = dateOfBirth;
-      delete body.dateOfBirth; // Remove dateOfBirth as we're using dateOfBirth
     }
 
     if (typeof body.businessCategory === "number") {
