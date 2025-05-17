@@ -62,9 +62,10 @@ model Category {
   name        String
   description String
   createdAt   DateTime @default(now())
-   updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
  
   subCategory subCategory[]
+  powerTeams  PowerTeam[] @relation("PowerTeamCategories")
  
   @@map("category")
 }
@@ -75,9 +76,23 @@ model subCategory {
   category    Category @relation(fields: [categoryId], references: [id])
   categoryId  Int
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) // Note: Consider @updatedAt
+  updatedAt   DateTime @updatedAt
+
+  powerTeams  PowerTeam[] @relation("PowerTeamSubCategories")
 
   @@map("subCategory")
+}
+
+model PowerTeam {
+  id            Int         @id @default(autoincrement())
+  name          String      @unique
+  categories    Category[]  @relation("PowerTeamCategories")
+  subCategories subCategory[] @relation("PowerTeamSubCategories")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  messages      Message[] 
+
+  @@map("powerteams")
 }
 
 model SiteSetting {
@@ -104,16 +119,19 @@ model Training {
 model Message {
   id         Int      @id @default(autoincrement())
   heading    String   @db.VarChar(255)
-  powerteam  String   @db.VarChar(100)
   message    String   @db.Text
   attachment String?  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  chapter    Chapter? @relation(fields: [chapterId], references: [id])
+
+  chapter    Chapter?   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   chapterId  Int?
 
-  @@index([chapterId])
+  powerTeam   PowerTeam? @relation(fields: [powerTeamId], references: [id], onDelete: Cascade)
+  powerTeamId Int?
 
+  @@index([chapterId])
+  @@index([powerTeamId])
   @@map("messages")
 }
 
@@ -136,15 +154,15 @@ model Chapter {
   updatedAt          DateTime @updatedAt
 
   members      Member[]
-  packages     Package[] // Added relation to Package model
-  meetings     ChapterMeeting[] // Relation to ChapterMeeting model
-  visitors     Visitor[]        @relation("VisitorHomeChapter") // Relation to Visitor model
-  transactions Transaction[] // Added relation to Transaction model
-  references   Reference[] // Added relation to Reference model
-  oneToOnes    OneToOne[] // Relation to OneToOne model
-  messages     Message[] // Relation to Message model
-  chapterRoles ChapterRole[] // Relation to chapter roles
-  thankYouSlips ThankYouSlip[] // Relation to thank you slips
+  packages     Package[] 
+  meetings     ChapterMeeting[] 
+  visitors     Visitor[]        @relation("VisitorHomeChapter") 
+  transactions Transaction[] 
+  references   Reference[] 
+  oneToOnes    OneToOne[] 
+  messages     Message[] 
+  chapterRoles ChapterRole[] 
+  thankYouSlips ThankYouSlip[] 
 
 
   @@map("chapters")

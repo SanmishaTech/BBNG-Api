@@ -61,7 +61,7 @@ const memberSchema = z.object({
     .positive("Chapter ID must be a positive integer")
     .optional(),
   category: z.string().min(1, "Category is required"),
-  businessCategory: z.string(),
+  businessCategory: z.string().optional(),
   gender: z.enum(["male", "female", "other"], {
     errorMap: () => ({ message: "Gender must be male, female, or other" }),
   }),
@@ -80,44 +80,47 @@ const memberSchema = z.object({
     .max(15, "Secondary mobile number must be at most 15 digits")
     .optional(),
   gstNo: z.string().optional(),
-  organizationName: z.string().min(1, "Organization name is required"),
+  organizationName: z.string().optional(),
   businessTagline: z.string().optional(),
   organizationMobileNo: z
     .string()
     .min(10, "Organization mobile number must be at least 10 digits")
-    .max(15, "Organization mobile number must be at most 15 digits"),
-  organizationLandlineNo: z.string().optional(),
-  organizationEmail: z
-    .string()
-    .email("Invalid organization email format")
+    .max(15, "Organization mobile number must be at most 15 digits")
     .optional(),
-  orgAddressLine1: z.string().min(1, "Organization address is required"),
+  organizationLandlineNo: z.string().optional(),
+  organizationEmail: z.preprocess(val => val === "" ? undefined : val, z.string().email().optional()),
+  
+  orgAddressLine1: z.string().optional(),
   orgAddressLine2: z.string().optional(),
-  orgLocation: z.string().min(1, "Organization location is required"),
+  orgLocation: z.string().optional(),
   orgPincode: z
     .string()
     .min(6, "Organization pincode must be 6 digits")
-    .max(6, "Organization pincode must be 6 digits"),
-  organizationWebsite: z
-    .string()
-    .url("Invalid organization website URL")
+    .max(6, "Organization pincode must be 6 digits")
     .optional(),
+  organizationWebsite: z
+    .preprocess(
+      (val) => (val && typeof val === 'string' && val.trim() !== '' ? val : undefined),
+      z.string().url("Invalid organization website URL").optional()
+    ),
+
   organizationDescription: z.string().optional(),
-  addressLine1: z.string().min(1, "Address line 1 is required"),
-  location: z.string().min(1, "Location is required"),
+  addressLine1: z.string().optional(),
+  location: z.string().optional(),
   addressLine2: z.string().optional(),
   pincode: z
     .string()
     .min(6, "Pincode must be 6 digits")
-    .max(6, "Pincode must be 6 digits"),
+    .max(6, "Pincode must be 6 digits")
+    .optional(),
   specificAsk: z.string().optional(),
   specificGive: z.string().optional(),
   clients: z.string().optional(),
   profilePicture1: z.string().optional(),
   profilePicture2: z.string().optional(),
   profilePicture3: z.string().optional(),
-  email: z.string().email("Valid email is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.preprocess(val => val === "" ? undefined : val, z.string().email().optional()),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
   // verifyPassword is not in the schema but was in the original destructuring.
   // If it's part of the form for confirmation, it should be in the schema or handled before validation.
 });
@@ -1241,6 +1244,8 @@ const searchMembers = async (req, res, next) => {
         profilePicture2: true,
         profilePicture3: true,
         category: true,
+        chapterId: true,
+        chapter: true,
         businessCategory: true,
         organizationName: true,
         businessTagline: true,
