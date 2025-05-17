@@ -39,6 +39,134 @@ const getUserChapterRoles = async (userId) => {
   }
 };
 
+/**
+ * Get chapters accessible by user based on their roles
+ * Groups chapters by role categories:
+ * - OB: Office Bearers (chapterHead, secretary, treasurer)
+ * - RD: Regional Directors (connected to zones)
+ * - DC: Development Coordinators (districtCoordinator, guardian)
+ * 
+ * @param {string} userId - User ID to check roles for
+ * @returns {Promise<Array>} Array containing role categories and accessible chapter IDs
+ */
+const getUserAccessibleChapters = async (userId) => {
+  try {
+    console.log(`Getting accessible chapters for user: ${userId}`);
+    
+    // Initialize result structure
+    const result = [
+      { role: 'OB', chapters: [] },
+      { role: 'RD', chapters: [] },
+      { role: 'DC', chapters: [] }
+    ];
+    
+    // Get the member associated with this user
+    const member = await prisma.member.findUnique({
+      where: { userId },
+      include: {
+        chapterRoles: {
+          select: {
+            roleType: true,
+            chapterId: true,
+          },
+        },
+        // Include the chapter to get zone information
+        chapter: {
+          select: {
+            id: true,
+            zoneId: true
+          }
+        }
+      },
+    });
+
+    if (!member) {
+      console.log(`No member found for user: ${userId}`);
+      return result;
+    }
+    
+    console.log(`Found member with ${member.chapterRoles.length} chapter roles`);
+
+    // Process OB roles (office bearers)
+    const obRoles = ['chapterHead', 'secretary', 'treasurer'];
+    const obChapters = member.chapterRoles
+      .filter(role => obRoles.includes(role.roleType))
+      .map(role => role.chapterId);
+    
+    // Remove duplicates
+    result[0].chapters = [...new Set(obChapters)];
+    console.log(`OB chapters: ${result[0].chapters.join(', ')}`);
+
+    // Process DC roles (development coordinators)
+    // Checking for 'districtCoordinator' and 'guardian' as well as the possible 'developmentCoordinator' role
+    const dcRoles = ['districtCoordinator', 'guardian', 'developmentCoordinator'];
+    const dcChapters = member.chapterRoles
+      .filter(role => dcRoles.includes(role.roleType))
+      .map(role => role.chapterId);
+    
+    // Remove duplicates
+    result[2].chapters = [...new Set(dcChapters)];
+    console.log(`DC chapters: ${result[2].chapters.join(', ')}`);
+
+    // Now handle RD roles by checking for zone roles in a separate query
+    // This avoids issues if the zoneRoles relation is not properly defined
+    try {
+      console.log(`[RD DEBUG] Processing RD roles for userId: ${userId}`);
+      const zoneRoles = await prisma.zoneRole.findMany({
+        where: {
+          member: {
+            userId: userId
+          }
+        },
+        select: {
+          roleType: true,
+          zoneId: true
+        }
+      });
+      
+      if (zoneRoles && zoneRoles.length > 0) {
+        console.log(`Found ${zoneRoles.length} zone roles`);
+        const rdRoles = ['Regional Director', 'Joint Secretary']; // Match database casing
+        const zoneIds = zoneRoles
+          .filter(role => rdRoles.includes(role.roleType))
+          .map(role => role.zoneId);
+        
+        // If user has zone roles, get all chapters in those zones
+        if (zoneIds.length > 0) {
+          const chaptersInZones = await prisma.chapter.findMany({
+            where: {
+              zoneId: {
+                in: zoneIds
+              }
+            },
+            select: {
+              id: true
+            }
+          });
+          
+          result[1].chapters = chaptersInZones.map(chapter => chapter.id);
+          console.log(`RD chapters: ${result[1].chapters.join(', ')}`);
+        }
+      } else {
+        console.log('No zone roles found');
+      }
+    } catch (zoneError) {
+      console.error('Error fetching zone roles:', zoneError);
+      // We'll continue without zone roles if there was an error
+    }
+
+    console.log('[DEBUG getUserAccessibleChapters] Returning result:', JSON.stringify(result, null, 2));
+    return result;
+  } catch (error) {
+    console.error('Error getting user accessible chapters:', error);
+    return [
+      { role: 'OB', chapters: [] },
+      { role: 'RD', chapters: [] },
+      { role: 'DC', chapters: [] }
+    ];
+  }
+};
+
 // Register a new user
 const register = async (req, res, next) => {
   if (process.env.ALLOW_REGISTRATION !== "true") {
@@ -213,16 +341,17 @@ const login = async (req, res, next) => {
       const { password: memberPass, ...memberWithoutPassword } = member;
       const { password: userPass, ...userWithoutPassword } = member.users;
 
-      // Get other chapter roles
-      const otherChapterRoles = await getUserChapterRoles(member.users.id);
+      // Get accessible chapters grouped by role categories
+      const accessibleChapters = await getUserAccessibleChapters(member.users.id);
 
+      console.log('[DEBUG login] Sending accessibleChapters in response:', JSON.stringify(accessibleChapters, null, 2));
       return res.json({
         token,
         user: {
           ...userWithoutPassword,
           member: memberWithoutPassword,
           isMember: true,
-          otherChapterRoles, // Add this line
+          accessibleChapters, // Use the new structured chapter access data
         },
       });
     }
@@ -281,8 +410,22 @@ const login = async (req, res, next) => {
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
-
-    return res.json({ token, user: { ...userWithoutPassword, otherChapterRoles } }); // Add otherChapterRoles here
+    
+    // Get all chapters user has access to based on their roles
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    
+    // Logging to help with debugging
+    console.log("Response sent with accessibleChapters:", JSON.stringify(accessibleChapters));
+    
+    // Format the response exactly as required
+    return res.json({ 
+      token, 
+      user: { 
+        ...userWithoutPassword, 
+        otherChapterRoles
+      },
+      accessibleChapters  // This is an array with the required format
+    });
   } catch (error) {
     next(error);
   }
@@ -378,4 +521,6 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
+  getUserChapterRoles,
+  getUserAccessibleChapters,
 };

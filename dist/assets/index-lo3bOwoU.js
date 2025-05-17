@@ -20395,7 +20395,7 @@ var ML = function () {
             .join(""),
           `
   }
-  
+
   .`
         )
         .concat(
@@ -20408,7 +20408,7 @@ var ML = function () {
           a,
           `;
   }
-  
+
   .`
         )
         .concat(
@@ -20421,7 +20421,7 @@ var ML = function () {
           a,
           `;
   }
-  
+
   .`
         )
         .concat(cm, " .")
@@ -20434,7 +20434,7 @@ var ML = function () {
           a,
           `;
   }
-  
+
   .`
         )
         .concat(um, " .")
@@ -20447,7 +20447,7 @@ var ML = function () {
           a,
           `;
   }
-  
+
   body[`
         )
         .concat(
@@ -48844,9 +48844,9 @@ const WY = ({
       specificAsk: X.string().optional(),
       specificGive: X.string().optional(),
       clients: X.string().optional(),
-      profilePicture1: X.instanceof(File).optional(),
-      profilePicture2: X.instanceof(File).optional(),
-      profilePicture3: X.instanceof(File).optional(),
+      profilePicture: X.instanceof(File).optional(),
+      coverPhoto: X.instanceof(File).optional(),
+      logo: X.instanceof(File).optional(),
       email: X.string().email("Valid email is required"),
     });
     return e === "create"
@@ -48921,9 +48921,9 @@ function aR({ mode: e }) {
         specificAsk: "",
         specificGive: "",
         clients: "",
-        profilePicture1: void 0,
-        profilePicture2: void 0,
-        profilePicture3: void 0,
+        profilePicture: void 0,
+        coverPhoto: void 0,
+        logo: void 0,
         email: (h == null ? void 0 : h.email) || "",
         ...(e === "create" ? { password: "", verifyPassword: "" } : {}),
       },
@@ -48939,9 +48939,9 @@ function aR({ mode: e }) {
       queryFn: async () => {
         const E = await Be(`/api/members/${n}`),
           {
-            profilePicture1: _,
-            profilePicture2: T,
-            profilePicture3: k,
+            profilePicture: _,
+            coverPhoto: T,
+            logo: k,
             chapter: P,
             ...L
           } = E,
@@ -48959,9 +48959,9 @@ function aR({ mode: e }) {
             ...L,
             chapterId: (P == null ? void 0 : P.id) || E.chapterId,
             dob: E.dob ? new Date(E.dob) : new Date(),
-            profilePicture1: void 0,
-            profilePicture2: void 0,
-            profilePicture3: void 0,
+            profilePicture: void 0,
+            coverPhoto: void 0,
+            logo: void 0,
             mobile2: E.mobile2 || null,
             organizationEmail: E.organizationEmail || "",
             organizationWebsite: E.organizationWebsite || "",
@@ -50095,9 +50095,9 @@ const eK = () =>
       specificAsk: X.string().optional(),
       specificGive: X.string().optional(),
       clients: X.string().optional(),
-      profilePicture1: X.instanceof(File).optional(),
-      profilePicture2: X.instanceof(File).optional(),
-      profilePicture3: X.instanceof(File).optional(),
+      profilePicture: X.instanceof(File).optional(),
+      coverPhoto: X.instanceof(File).optional(),
+      logo: X.instanceof(File).optional(),
       email: X.string().email("Valid email is required"),
     });
     return e === "create"
@@ -50161,9 +50161,9 @@ function rK({ mode: e }) {
         specificAsk: "",
         specificGive: "",
         clients: "",
-        profilePicture1: void 0,
-        profilePicture2: void 0,
-        profilePicture3: void 0,
+        profilePicture: void 0,
+        coverPhoto: void 0,
+        logo: void 0,
         email: "",
         ...(e === "create" ? { password: "", verifyPassword: "" } : {}),
       },
@@ -50174,9 +50174,9 @@ function rK({ mode: e }) {
       queryFn: async () => {
         const C = await Be(`/api/members/${n}`),
           {
-            profilePicture1: M,
-            profilePicture2: E,
-            profilePicture3: _,
+            profilePicture: M,
+            coverPhoto: E,
+            logo: _,
             chapter: T,
             ...k
           } = C,
@@ -50194,9 +50194,9 @@ function rK({ mode: e }) {
             ...k,
             chapterId: (T == null ? void 0 : T.id) || C.chapterId,
             dob: C.dob ? new Date(C.dob) : new Date(),
-            profilePicture1: void 0,
-            profilePicture2: void 0,
-            profilePicture3: void 0,
+            profilePicture: void 0,
+            coverPhoto: void 0,
+            logo: void 0,
             mobile2: C.mobile2 || null,
             organizationEmail: C.organizationEmail || "",
             organizationWebsite: C.organizationWebsite || "",
@@ -61451,11 +61451,11 @@ const QK = () => {
             return {
               id: j.id.toString(),
               name: j.memberName,
-              profilePicture: j.profilePicture1
-                ? `http://localhost:3000/uploads/members/${j.profilePicture1}`
+              profilePicture: j.profilePicture
+                ? `http://localhost:3000/uploads/members/${j.profilePicture}`
                 : "https://via.placeholder.com/100",
-              coverPhoto: j.profilePicture2
-                ? `http://localhost:3000/uploads/members/${j.profilePicture2}`
+              coverPhoto: j.coverPhoto
+                ? `http://localhost:3000/uploads/members/${j.coverPhoto}`
                 : void 0,
               email: j.email,
               phone: j.mobile1,
@@ -62438,11 +62438,11 @@ const QK = () => {
             C = {
               id: S.id.toString(),
               name: S.memberName,
-              profilePicture: S.profilePicture1
-                ? `http://localhost:3000/uploads/members/${S.profilePicture1}`
+              profilePicture: S.profilePicture
+                ? `http://localhost:3000/uploads/members/${S.profilePicture}`
                 : "https://via.placeholder.com/100",
-              coverPhoto: S.profilePicture2
-                ? `http://localhost:3000/uploads/members/${S.profilePicture2}`
+              coverPhoto: S.coverPhoto
+                ? `http://localhost:3000/uploads/members/${S.coverPhoto}`
                 : "https://images.unsplash.com/photo-1614850523459-c2f4c699c6b2?auto=format&fit=crop&w=1470&h=400",
               email: S.email,
               phone: S.mobile1,

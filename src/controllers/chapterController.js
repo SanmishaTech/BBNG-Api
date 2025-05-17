@@ -253,7 +253,7 @@ const getChapterRoles = asyncHandler(async (req, res) => {
           email: true,
           mobile1: true,
           organizationName: true,
-          profilePicture1: true,
+          profilePicture: true,
         },
       },
     },
