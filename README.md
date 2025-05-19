@@ -66,7 +66,7 @@ A simple Node.js REST API project built with Express, Prisma, and JWT.
 
 6.  Run database migrations:
 
-    ```bash
+````bash
     npx prisma migrate dev --name init
     ```
 
@@ -124,3 +124,4 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ## License
 
 [License](https://choosealicense.com/licenses/mit/)
+````
