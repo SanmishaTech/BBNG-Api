@@ -65,6 +65,9 @@ model Category {
   updatedAt   DateTime @updatedAt
 
   subCategory subCategory[]
+  
+  // Relation to PowerTeam
+  powerTeams PowerTeam[] @relation("PowerTeamCategories")
 
   @@map("category")
 }
@@ -76,6 +79,9 @@ model subCategory {
   categoryId Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) // Note: Consider @updatedAt
+  
+  // Relation to PowerTeam
+  powerTeams PowerTeam[] @relation("PowerTeamSubCategories")
 
   @@map("subCategory")
 }
@@ -590,6 +596,21 @@ model Statistics {
   updatedAt         DateTime @updatedAt
 
   @@map("statistics")
+}
+
+model PowerTeam {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Many-to-many relationship with Category
+  categories    Category[]    @relation("PowerTeamCategories")
+  
+  // Many-to-many relationship with subCategory
+  subCategories subCategory[] @relation("PowerTeamSubCategories")
+  
+  @@map("power_teams")
 }
 
 model ZoneRole {
