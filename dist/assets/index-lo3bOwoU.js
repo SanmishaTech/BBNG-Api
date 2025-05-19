@@ -14648,7 +14648,7 @@ function et(e, n) {
   return { ...o, mutate: l, mutateAsync: o.mutate };
 }
 const Km = "BBNG",
-  xO = () => "http://localhost:3000/",
+  xO = () => "http://15.207.30.113//",
   Wy = xO();
 var rd = {},
   _N;
@@ -27603,7 +27603,7 @@ const zM = {
     typeof WorkerGlobalScope < "u" &&
     self instanceof WorkerGlobalScope &&
     typeof self.importScripts == "function",
-  V9 = (Gb && window.location.href) || "http://localhost:3000",
+  V9 = (Gb && window.location.href) || "http://15.207.30.113/",
   H9 = Object.freeze(
     Object.defineProperty(
       {
@@ -48867,7 +48867,7 @@ const WY = ({
           })
       : n;
   },
-  JY = "http://localhost:3000";
+  JY = "http://15.207.30.113/";
 function aR({ mode: e }) {
   const { id: n } = us(),
     s = St(),
@@ -48938,13 +48938,7 @@ function aR({ mode: e }) {
       queryKey: ["member", n],
       queryFn: async () => {
         const E = await Be(`/api/members/${n}`),
-          {
-            profilePicture: _,
-            coverPhoto: T,
-            logo: k,
-            chapter: P,
-            ...L
-          } = E,
+          { profilePicture: _, coverPhoto: T, logo: k, chapter: P, ...L } = E,
           re = [_, T, k].map((K) =>
             K &&
             typeof K == "string" &&
@@ -50118,7 +50112,7 @@ const eK = () =>
           })
       : n;
   },
-  sK = "http://localhost:3000";
+  sK = "http://15.207.30.113/";
 function rK({ mode: e }) {
   var S;
   const n =
@@ -50173,13 +50167,7 @@ function rK({ mode: e }) {
       queryKey: ["member", n],
       queryFn: async () => {
         const C = await Be(`/api/members/${n}`),
-          {
-            profilePicture: M,
-            coverPhoto: E,
-            logo: _,
-            chapter: T,
-            ...k
-          } = C,
+          { profilePicture: M, coverPhoto: E, logo: _, chapter: T, ...k } = C,
           L = [M, E, _].map((Q) =>
             Q &&
             typeof Q == "string" &&
@@ -61452,10 +61440,10 @@ const QK = () => {
               id: j.id.toString(),
               name: j.memberName,
               profilePicture: j.profilePicture
-                ? `http://localhost:3000/uploads/members/${j.profilePicture}`
+                ? `http://15.207.30.113//uploads/members/${j.profilePicture}`
                 : "https://via.placeholder.com/100",
               coverPhoto: j.coverPhoto
-                ? `http://localhost:3000/uploads/members/${j.coverPhoto}`
+                ? `http://15.207.30.113//uploads/members/${j.coverPhoto}`
                 : void 0,
               email: j.email,
               phone: j.mobile1,
@@ -62439,10 +62427,10 @@ const QK = () => {
               id: S.id.toString(),
               name: S.memberName,
               profilePicture: S.profilePicture
-                ? `http://localhost:3000/uploads/members/${S.profilePicture}`
+                ? `http://15.207.30.113//uploads/members/${S.profilePicture}`
                 : "https://via.placeholder.com/100",
               coverPhoto: S.coverPhoto
-                ? `http://localhost:3000/uploads/members/${S.coverPhoto}`
+                ? `http://15.207.30.113//uploads/members/${S.coverPhoto}`
                 : "https://images.unsplash.com/photo-1614850523459-c2f4c699c6b2?auto=format&fit=crop&w=1470&h=400",
               email: S.email,
               phone: S.mobile1,
