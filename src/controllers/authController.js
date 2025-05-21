@@ -6,9 +6,8 @@ const prisma = require("../config/db");
 const emailService = require("../services/emailService");
 const validateRequest = require("../utils/validateRequest");
 const config = require("../config/config");
+const jwtConfig = require("../config/jwt"); // Corrected: Get secret and expiresIn from here
 const createError = require("http-errors");
-const jwtConfig = require("../config/jwt");
-const { SUPER_ADMIN } = require("../config/roles");
 
 // Helper function to get user's chapter roles
 const getUserChapterRoles = async (userId) => {
@@ -187,6 +186,7 @@ const register = async (req, res, next) => {
         .string()
         .min(6, "Password must be at least 6 characters long.")
         .nonempty("Password is required."),
+      agreedToPolicy: z.boolean().optional(), // Add agreedToPolicy to schema
     })
     .superRefine(async (data, ctx) => {
       // Check if a user with the same email already exists
@@ -224,14 +224,34 @@ const register = async (req, res, next) => {
 };
 
 const login = async (req, res, next) => {
-  const schema = z.object({
-    email: z.string().email("Invalid Email format").min(1, "email is required"),
-    password: z.string().min(6, "Password must be at least 6 characters long"),
+  // Zod schema for login validation
+  const loginSchema = z.object({
+    email: z.string().email("Invalid email format."),
+    password: z.string().nonempty("Password is required."),
+    // agreedToPolicy removed as it's handled post-login if needed
   });
 
   try {
-    const validationErrors = await validateRequest(schema, req.body, res);
-    const { email, password } = req.body;
+    // Perform synchronous validation directly
+    const validatedData = loginSchema.parse(req.body);
+    // If parse succeeds, validatedData will contain the data.
+    // If it fails, it will throw a ZodError.
+
+    const { email, password } = validatedData; // Use validatedData, agreedToPolicy removed
+
+    // Get the last update time of the active site policy
+    const activePolicy = await prisma.sitePolicy.findFirst({
+      where: { isActive: true },
+      // No need for orderBy if we strictly maintain only one active policy
+      // orderBy: { updatedAt: 'desc' }, 
+    });
+
+    // Critical: If no active policy is found, it's a configuration error.
+    // For now, we log an error. Depending on requirements, this might need to block login
+    // or default to requiring acceptance if user.policyAcceptedAt is null.
+    if (!activePolicy) {
+      console.error("CRITICAL: No active site policy found during login. Policy re-acceptance logic might not function as expected.");
+    }
 
     // First try to find a member (since members are also users)
     const member = await prisma.member.findUnique({
@@ -246,6 +266,8 @@ const login = async (req, res, next) => {
             role: true,
             active: true,
             lastLogin: true,
+            policyAccepted: true,
+            policyAcceptedAt: true, // Include policyAcceptedAt for members
           },
         },
         chapter: true,
@@ -331,28 +353,47 @@ const login = async (req, res, next) => {
         expiresIn: jwtConfig.expiresIn,
       });
 
-      // Update lastLogin timestamp
-      await prisma.user.update({
+      // Update last login time
+      const updatedUser = await prisma.user.update({
         where: { id: member.users.id },
         data: { lastLogin: new Date() },
       });
 
-      // Remove sensitive data from response
-      const { password: memberPass, ...memberWithoutPassword } = member;
-      const { password: userPass, ...userWithoutPassword } = member.users;
+      // Prepare user response (excluding password)
+      const userResponse = {
+        id: updatedUser ? updatedUser.id : member.users.id,
+        name: updatedUser ? updatedUser.name : member.users.name,
+        email: updatedUser ? updatedUser.email : member.users.email,
+        role: updatedUser ? updatedUser.role : member.users.role,
+        active: updatedUser ? updatedUser.active : member.users.active,
+        lastLogin: updatedUser ? updatedUser.lastLogin : member.users.lastLogin,
+        policyAccepted: member.users.policyAccepted,
+        policyAcceptedAt: member.users.policyAcceptedAt,
+      };
+
+      const isAdmin = userResponse.role === 'SUPER_ADMIN' || userResponse.role === 'admin';
+      let requiresPolicyAcceptance = false;
+
+      if (!isAdmin) {
+        if (!userResponse.policyAcceptedAt) { // User has never accepted any policy
+          requiresPolicyAcceptance = true;
+        } else if (activePolicy && userResponse.policyAcceptedAt < activePolicy.updatedAt) { // User accepted a version older than the current active policy
+          requiresPolicyAcceptance = true;
+        }
+        // If activePolicy is null (config error), users who previously accepted will not be asked again.
+        // This maintains previous behavior: if they accepted once, they are good unless a newer policy exists.
+      }
 
       // Get accessible chapters grouped by role categories
       const accessibleChapters = await getUserAccessibleChapters(member.users.id);
 
       console.log('[DEBUG login] Sending accessibleChapters in response:', JSON.stringify(accessibleChapters, null, 2));
       return res.json({
-        token,
-        user: {
-          ...userWithoutPassword,
-          member: memberWithoutPassword,
-          isMember: true,
-          accessibleChapters, // Use the new structured chapter access data
-        },
+        accesstoken: token,
+        user: userResponse,
+        isMember: true,
+        accessibleChapters: accessibleChapters,
+        requiresPolicyAcceptance: requiresPolicyAcceptance,
       });
     }
 
@@ -365,9 +406,10 @@ const login = async (req, res, next) => {
         email: true,
         password: true,
         role: true,
-        memberId: true,
         active: true,
         lastLogin: true,
+        policyAccepted: true,
+        policyAcceptedAt: true,
       },
     });
 
@@ -394,23 +436,43 @@ const login = async (req, res, next) => {
       expiresIn: jwtConfig.expiresIn,
     });
 
-    // Update lastLogin timestamp
-    await prisma.user.update({
+    // Update last login time and policy acceptance if needed
+    let updatedUser = null;
+    const dataToUpdate = { lastLogin: new Date() };
+
+    updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() },
+      data: dataToUpdate,
     });
+
+    // Prepare user response (excluding password)
+    const userResponse = {
+      id: updatedUser ? updatedUser.id : user.id,
+      name: updatedUser ? updatedUser.name : user.name,
+      email: updatedUser ? updatedUser.email : user.email,
+      role: updatedUser ? updatedUser.role : user.role,
+      active: updatedUser ? updatedUser.active : user.active,
+      lastLogin: updatedUser ? updatedUser.lastLogin : user.lastLogin,
+      policyAccepted: updatedUser ? updatedUser.policyAccepted : user.policyAccepted,
+    };
+
+    const isAdmin = userResponse.role === 'SUPER_ADMIN' || userResponse.role === 'admin';
+    let requiresPolicyAcceptance = false;
+
+    if (!isAdmin) {
+      if (!user.policyAcceptedAt) { // User has never accepted any policy
+        requiresPolicyAcceptance = true;
+      } else if (activePolicy && user.policyAcceptedAt < activePolicy.updatedAt) { // User accepted a version older than the current active policy
+        requiresPolicyAcceptance = true;
+      }
+    }
 
     // Get other chapter roles if the user is linked to a member
     let otherChapterRoles = [];
-    if (user.memberId) { // Check if the user is associated with a member record
-      // We need the actual member record to fetch chapterRoles, so we query member by user.id
-      // This assumes user.id is the foreign key in the Member table (as per schema: Member.userId)
+    if (user.memberId) {
       otherChapterRoles = await getUserChapterRoles(user.id);
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
-    
     // Get all chapters user has access to based on their roles
     const accessibleChapters = await getUserAccessibleChapters(user.id);
     
@@ -421,12 +483,22 @@ const login = async (req, res, next) => {
     return res.json({ 
       token, 
       user: { 
-        ...userWithoutPassword, 
+        ...userResponse, 
         otherChapterRoles
       },
       accessibleChapters  // This is an array with the required format
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Map Zod errors to your desired format
+      const errors = {};
+      error.errors.forEach((err) => {
+        // Assuming path[0] is the field name, adjust if your error structure is different
+        errors[err.path[0]] = err.message;
+      });
+      return res.status(400).json({ errors });
+    }
+    // For other errors, pass to the main error handler
     next(error);
   }
 };
@@ -516,11 +588,70 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+// Controller to get the site policy text
+const getPolicyText = async (req, res, next) => {
+  try {
+    console.log("ASDsdasd")
+    const policySetting = await prisma.siteSetting.findUnique({
+      where: { key: "policy" },
+    });
+    console.log(policySetting)
+
+    if (!policySetting || !policySetting.value) {
+      return next(createError(404, "Policy text not found."));
+    }
+
+    res.json({ policyText: policySetting.value });
+  } catch (error) {
+    console.error("Error fetching policy text:", error);
+    next(createError(500, "Failed to retrieve policy text."));
+  }
+};
+
+const acceptPolicy = async (req, res, next) => {
+  try {
+    const userId = req.user.id; // Assuming isAuthenticated middleware adds user to req
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized: User ID not found in token.' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        policyAccepted: true,
+        policyAcceptedAt: new Date(),
+      },
+      select: { // Select only the fields safe to return
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        lastLogin: true,
+        policyAccepted: true,
+        policyAcceptedAt: true,
+        // Add other relevant fields from your user model that are safe to expose
+      },
+    });
+
+    res.status(200).json({
+      message: 'Policy accepted successfully.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error accepting policy:', error);
+    next(error); // Pass to global error handler
+  }
+};
+
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
-  getUserChapterRoles,
   getUserAccessibleChapters,
+  getUserChapterRoles,
+  getPolicyText,
+  acceptPolicy,
 };

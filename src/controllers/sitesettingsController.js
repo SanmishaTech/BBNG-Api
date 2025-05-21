@@ -13,6 +13,8 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest"); // Assuming this utility exists based on userController
 
+const POLICY_TEXT_KEY = "sitePolicyText"; // Define the special key for policy text
+
 // --- Zod Schemas ---
 const siteSettingCreateSchema = z.object({
   key: z.string().min(1, "Key is required.")
@@ -172,13 +174,43 @@ exports.updateSetting = async (req, res, next) => {
 
     const { key, value } = validationResult; // Use validated data
 
-    // Ensure key is trimmed before updating
+    // Ensure key is trimmed
     const trimmedKey = key.trim();
-    const updatedSetting = await prisma.siteSetting.update({
-      where: { id: settingId },
-      data: { key: trimmedKey, value: value },
-    });
-    res.status(200).json(updatedSetting);
+
+    if (trimmedKey === POLICY_TEXT_KEY) {
+      // Special handling for site policy text
+      // We are updating the SitePolicy table, not SiteSetting for this key.
+      // The `id` from req.params might not be relevant here if we always update the single active policy.
+      // Or, the admin UI might be passing the ID of the SiteSetting record that traditionally held the policy.
+      // For robust re-agreement, we must update SitePolicy.text where isActive:true.
+
+      const activePolicyUpdate = await prisma.sitePolicy.updateMany({
+        where: { isActive: true },
+        data: { text: value }, // `value` here is the new policy text
+      });
+
+      if (activePolicyUpdate.count === 0) {
+        return res.status(404).json({ errors: { message: `No active site policy found to update. Setting with key '${POLICY_TEXT_KEY}' (ID: ${settingId}) could not be mapped to an active policy.` } });
+      }
+      // Successfully updated the active policy in SitePolicy table.
+      // We need to return a response consistent with what the frontend expects.
+      // If it expects a SiteSetting-like object, we can construct one or fetch the original SiteSetting if it still exists.
+      // For now, let's return a success message. The frontend might need adjustment if it strictly expects the updated SiteSetting object for 'sitePolicyText'.
+      res.status(200).json({ 
+        message: "Site policy updated successfully in the dedicated policy table.", 
+        key: trimmedKey, 
+        value: value, 
+        id: settingId // Return original ID for consistency if frontend uses it
+      });
+
+    } else {
+      // Default behavior for all other site settings
+      const updatedSetting = await prisma.siteSetting.update({
+        where: { id: settingId },
+        data: { key: trimmedKey, value: value },
+      });
+      res.status(200).json(updatedSetting);
+    }
 
   } catch (error) {
     if (error.code === 'P2025') {

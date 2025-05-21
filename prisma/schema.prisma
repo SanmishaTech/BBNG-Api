@@ -20,6 +20,10 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  // Policy Acceptance Fields
+  policyAccepted    Boolean   @default(false)
+  policyAcceptedAt  DateTime?
+
   member   Member? @relation("UserMemberRelation")
   memberId Int? // This field still exists. If Member.userId is the true FK for the user, this might be redundant or for a different purpose.
   // Assuming Member.userId is the primary link to User for member-specific data.
@@ -28,6 +32,17 @@ model User {
   zoneRoleHistoriesPerformed ZoneRoleHistory[] @relation("UserPerformedZoneRoleHistory")
 
   @@map("users")
+}
+
+model SitePolicy {
+  id        Int      @id @default(autoincrement())
+  text      String   @db.Text // Use @db.Text for potentially long policy content
+  version   Int      @default(1) // Simple versioning, increment on update
+  isActive  Boolean  @default(true) // To mark the currently active policy
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // Tracks when this policy record itself was last modified
+
+  @@map("site_policies")
 }
 
 model Zone {
