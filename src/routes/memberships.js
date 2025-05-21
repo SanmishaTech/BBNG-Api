@@ -54,4 +54,17 @@ router.delete("/:id", authMiddleware, isAdmin, membershipController.deleteMember
  */
 router.get("/member/:memberId", authMiddleware, membershipController.getMembershipsByMemberId);
 
+
+/**
+ * @route   GET /api/memberships/invoice/:invoiceFilename
+ * @desc    Download a specific invoice PDF
+ * @access  Admin only
+ */
+router.get(
+  "/invoice/:invoiceFilename",
+  authMiddleware,
+  isAdmin,
+  membershipController.downloadInvoice
+);
+
 module.exports = router; 

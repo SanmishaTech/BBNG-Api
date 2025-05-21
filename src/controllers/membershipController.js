@@ -4,6 +4,10 @@ const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
 const { addMonths, subDays, getMonth, getYear, setMonth, setDate, setYear } = require("date-fns");
+const { generateInvoicePdf } = require('../utils/invoiceGenerator');
+const { numberToWords } = require('../utils/numberToWords');
+const path = require('path');
+const fs = require('fs');
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -45,6 +49,16 @@ const asyncHandler = (fn) => (req, res, next) => {
  * Generate a financial year code based on a date
  * Returns string like "FY23-24" for dates in financial year 2023-2024
  */
+// Helper to format date as DD/MM/YYYY (already in invoiceGenerator.js, but might be useful here too)
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const getFinancialYearCode = (date = new Date()) => {
   const currentMonth = date.getMonth(); // 0-11
   const currentYear = date.getFullYear();
@@ -54,8 +68,8 @@ const getFinancialYearCode = (date = new Date()) => {
   const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
   const fyEndYear = fyStartYear + 1;
   
-  // Return FY format like "FY23-24" (last two digits of each year)
-  return `${fyStartYear.toString().slice(-2)}-${fyEndYear.toString().slice(-2)}`;
+  // Return FY format like "2324" (last two digits of start year + last two digits of end year)
+  return `${fyStartYear.toString().slice(-2)}${fyEndYear.toString().slice(-2)}`;
 };
 
 /**
@@ -104,9 +118,9 @@ const generateInvoiceNumber = async (invoiceDate) => {
   });
   
   // Create sequential number padded with leading zeros (001, 002, etc.)
-  const sequentialNumber = (invoiceCount + 1).toString().padStart(3, '0');
+  const sequentialNumber = (invoiceCount + 1).toString().padStart(5, '0');
   
-  // Final invoice number format: FY23-24/001
+  // Final invoice number format: 2324-001
   return `${financialYear}-${sequentialNumber}`;
 };
 
@@ -331,6 +345,90 @@ const createMembership = asyncHandler(async (req, res) => {
 
   // Update the user's active status
   await updateUserActiveStatus(req.body.memberId);
+
+  // --- Begin Invoice Generation ---
+  try {
+    const fullMember = await prisma.member.findUnique({
+      where: { id: membership.memberId }, // Use memberId from the created membership
+      include: { chapter: true } // Chapter is needed for HSN/SAC fallback; address details are direct on Member
+    });
+
+    const packageDetails = await prisma.package.findUnique({
+      where: { id: membership.packageId }
+    });
+
+    if (!fullMember || !packageDetails) {
+      console.error(`Invoice Generation: Member or Package details not found for membership ID ${membership.id}`);
+    } else {
+      const invoiceData = {
+        invoiceNumber: membership.invoiceNumber,
+        invoiceDate: membership.invoiceDate, 
+        member: {
+          memberName: fullMember.memberName,
+          addressLines: [
+            fullMember.orgAddressLine1,
+            fullMember.orgAddressLine2
+          ].filter(Boolean).map(line => line.trim()).filter(line => line.length > 0), // Ensure lines are not just whitespace
+          city: fullMember.orgLocation,
+          pincode: fullMember.orgPincode,
+          gstin: fullMember.gstNo,
+        },
+        items: [
+          {
+            srNo: 1,
+            description: `${packageDetails.packageName} - ${packageDetails.periodMonths} Months (Expiry: ${formatDate(membership.packageEndDate)})`,
+            hsnSac: packageDetails.hsnSac || fullMember.chapter?.hsnSac, // Prioritize package HSN, fallback to chapter
+            amount: Number(membership.basicFees),
+          },
+          // Example for additional item from image:
+          // This needs a source, e.g. if 'Chapter Venue Fees (Monthly)' is a separate product/service tied to membership or chapter
+          // If (membership.venueFeeAmount && membership.venueFeeAmount > 0) {
+          //   items.push({
+          //      srNo: items.length + 1, 
+          //      description: 'Chapter Venue Fees (Monthly)', 
+          //      amount: membership.venueFeeAmount 
+          //   });
+          //   totals.amountBeforeTax += membership.venueFeeAmount; 
+          // }
+        ],
+        totals: {
+          amountBeforeTax: Number(membership.basicFees), // Initial value, will be summed up below
+          cgstRate: Number(membership.cgstRate) || 0,
+          cgstAmount: Number(membership.cgstAmount) || 0,
+          sgstRate: Number(membership.sgstRate) || 0,
+          sgstAmount: Number(membership.sgstAmount) || 0,
+          igstRate: Number(membership.igstRate) || 0,
+          igstAmount: Number(membership.igstAmount) || 0,
+          totalAmount: Number(membership.totalAmount) || 0,
+          amountInWords: numberToWords(Number(membership.totalAmount) || 0),
+        },
+      };
+      
+      // Correct calculation for amountBeforeTax if multiple items are present
+      // Ensure item.amount is a number for the sum
+      invoiceData.totals.amountBeforeTax = invoiceData.items.reduce((sum, item) => sum + Number(item.amount), 0);
+      // Ensure totalAmount reflects the sum of all items + taxes. If venue fees were added, totalAmount in 'membership' might need re-evaluation or be stored inclusive.
+      // For simplicity, assuming membership.totalAmount from DB is the final correct figure after all considerations.
+
+      const invoicesDir = path.join(__dirname,"..", '..', 'invoices');
+      if (!fs.existsSync(invoicesDir)) {
+        fs.mkdirSync(invoicesDir, { recursive: true });
+      }
+      const invoiceFilePath = path.join(invoicesDir, `${membership.invoiceNumber}.pdf`);
+
+      await generateInvoicePdf(invoiceData, invoiceFilePath);
+      console.log(`Invoice ${membership.invoiceNumber}.pdf generated successfully at ${invoiceFilePath}`);
+
+      // Optional: Save invoicePath to the membership record
+      // await prisma.membership.update({
+      //   where: { id: membership.id },
+      //   data: { invoicePath: path.relative(path.join(__dirname, '..', '..'), invoiceFilePath) }, // Store relative path from backend root
+      // });
+    }
+  } catch (invoiceError) {
+    console.error(`Failed to generate invoice ${membership.invoiceNumber}:`, invoiceError);
+  }
+  // --- End Invoice Generation ---
 
   res.status(201).json(membership);
 });
@@ -729,6 +827,44 @@ const updateUserActiveStatus = async (memberId) => {
   }
 };
 
+/**
+ * GET /api/invoices/:invoiceFilename
+ * Download a specific invoice PDF.
+ * Accessible by admins only (to be enforced by route middleware).
+ */
+const downloadInvoice = asyncHandler(async (req, res, next) => {
+  const { invoiceFilename } = req.params;
+
+  if (!invoiceFilename || !invoiceFilename.endsWith('.pdf')) {
+    return next(createError(400, 'Invalid invoice filename format. Must end with .pdf'));
+  }
+
+  const safeFilename = path.basename(invoiceFilename);
+  // Prevent directory traversal by ensuring the basename is the same as the input filename.
+  // This is a basic check; ensure invoiceFilename comes from a trusted source (e.g., your database).
+  if (safeFilename !== invoiceFilename) {
+      return next(createError(400, 'Invalid characters in invoice filename.'));
+  }
+
+  const invoicesDir = path.join(__dirname, '..', '..', 'invoices');
+  const filePath = path.join(invoicesDir, safeFilename);
+
+  if (fs.existsSync(filePath)) {
+    res.download(filePath, safeFilename, (err) => {
+      if (err) {
+        console.error('Error downloading invoice:', err);
+        if (!res.headersSent) {
+          // If headers haven't been sent, we can send an error status.
+          // Otherwise, the error will be logged, and the download might fail client-side.
+          return next(createError(500, 'Could not download the invoice.'));
+        }
+      }
+    });
+  } else {
+    return next(createError(404, 'Invoice not found.'));
+  }
+});
+
 module.exports = {
   getMemberships,
   createMembership,
@@ -736,4 +872,6 @@ module.exports = {
   updateMembership,
   deleteMembership,
   getMembershipsByMemberId,
+  updateUserActiveStatus,
+  downloadInvoice,
 };

@@ -1,12 +1,12 @@
 module.exports = {
   //only superadmin section
-  //users
+  //members
   "users.read": ["super_admin"],
   "users.write": ["super_admin"],
   "users.delete": ["super_admin"],
   "users.export": ["super_admin"],
-  "members.export": ["super_admin", "admin", "member", "user"],
-  "transactions.export": ["super_admin", "admin", "member", "user"],
+  "members.export": ["super_admin", "admin", "member", "member"],
+  "transactions.export": ["super_admin", "admin", "member", "member"],
  
   //packages
   "packages.read": ["super_admin"],
@@ -28,18 +28,18 @@ module.exports = {
   "categories.update": ["super_admin", "admin"],
   "categories.delete": ["super_admin"],
   //messages
-  "messages.read": ["super_admin", "admin", "member", "user"],
-  "messages.write": ["super_admin", "admin", "member", "user"],
-  "messages.update": ["super_admin", "admin", "member", "user"],
-  "messages.delete": ["super_admin", "admin", "member", "user"],
+  "messages.read": ["super_admin", "admin", "member", "member"],
+  "messages.write": ["super_admin", "admin", "member", "member"],
+  "messages.update": ["super_admin", "admin", "member", "member"],
+  "messages.delete": ["super_admin", "admin", "member", "member"],
   // requirements
-  "requirements.read": ["super_admin", "admin", "member", "user"],
-  "requirements.write": ["super_admin", "admin", "member", "user"],
-  "requirements.delete": ["super_admin", "admin", "member", "user"],
+  "requirements.read": ["super_admin", "admin", "member", "member"],
+  "requirements.write": ["super_admin", "admin", "member", "member"],
+  "requirements.delete": ["super_admin", "admin", "member", "member"],
   // one-to-ones
-  "onetoones.read": ["super_admin", "admin", "member", "user"],
-  "onetoones.write": ["super_admin", "admin", "member", "user"],
-  "onetoones.delete": ["super_admin", "admin", "member", "user"],
+  "onetoones.read": ["super_admin", "admin", "member", "member"],
+  "onetoones.write": ["super_admin", "admin", "member", "member"],
+  "onetoones.delete": ["super_admin", "admin", "member", "member"],
  
    
  

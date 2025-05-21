@@ -222,13 +222,64 @@ const updateChapter = asyncHandler(async (req, res) => {
  */
 const deleteChapter = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!id) throw createError(400, "Invalid chapter ID");
+  if (!id || isNaN(id)) throw createError(400, "Invalid chapter ID provided.");
 
-  const existing = await prisma.chapter.findUnique({ where: { id } });
-  if (!existing) throw createError(404, "Chapter not found");
+  // Check if chapter exists
+  const existingChapter = await prisma.chapter.findUnique({ where: { id } });
+  if (!existingChapter) throw createError(404, `Chapter with ID ${id} not found.`);
 
-  await prisma.chapter.delete({ where: { id } });
-  res.json({ message: "Chapter deleted successfully" });
+  // Check for dependent entities
+  const membersCount = await prisma.member.count({
+    where: { chapterId: id },
+  });
+  // const packagesCount = await prisma.package.count({
+  //   where: { chapterId: id },
+  // });
+  // const chapterMeetingsCount = await prisma.chapterMeeting.count({
+  //   where: { chapterId: id },
+  // });
+  // For Visitors, specifically check those linked as their 'homeChapter'
+  // const visitorsCount = await prisma.visitor.count({
+  //   where: { chapterId: id }, // Assumes 'chapterId' in Visitor is for home chapter
+  // });
+  // const transactionsCount = await prisma.transaction.count({
+  //   where: { chapterId: id },
+  // });
+  // const messagesCount = await prisma.message.count({
+  //   where: { chapterId: id },
+  // });
+
+  let dependencies = [];
+  if (membersCount > 0) dependencies.push(`${membersCount} member(s)`);
+  // if (packagesCount > 0) dependencies.push(`${packagesCount} package(s)`);
+  // if (chapterMeetingsCount > 0) dependencies.push(`${chapterMeetingsCount} chapter meeting(s)`);
+  // if (visitorsCount > 0) dependencies.push(`${visitorsCount} visitor(s) (as home chapter)`);
+  // if (transactionsCount > 0) dependencies.push(`${transactionsCount} transaction(s)`);
+  // if (messagesCount > 0) dependencies.push(`${messagesCount} message(s)`);
+
+  if (dependencies.length > 0) {
+    throw createError(400, `Cannot delete Chapter ID ${id}. It is still referenced by ${dependencies.join(", ")}. Please remove or reassign these dependencies first.`);
+  }
+
+  try {
+    await prisma.chapter.delete({ where: { id } });
+    res.json({ message: "Chapter deleted successfully" });
+  } catch (error) {
+    if (error.code === "P2003") {
+      // Foreign key constraint violation
+      // This should ideally be caught by the checks above but serves as a fallback.
+      console.error(
+        `Foreign key constraint error deleting chapter ID ${id}:`,
+        error
+      );
+      throw createError(409, `Cannot delete Chapter ID ${id} due to existing relationships that were not pre-checked. Details: ${error.message}`);
+    } else if (error.code === "P2025") {
+      // This case should be caught by the initial findUnique check, but good to have a specific catch.
+      throw createError(404, `Chapter with ID ${id} not found for deletion.`);
+    }
+    // Let asyncHandler handle other errors or rethrow
+    throw error;
+  }
 });
 
 /** GET /api/chapters/:chapterId/roles
