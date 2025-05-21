@@ -46,7 +46,7 @@ async function testUserMemberReferenceRelationship() {
         name: 'Test User',
         email: 'user@test.com',
         password: 'password',
-        role: 'user'
+        role: 'member'
       }
     });
     

@@ -247,6 +247,35 @@ exports.deleteZone = async (req, res) => {
       return res.status(400).json({ message: "Invalid Zone ID provided." });
     }
 
+        // Check for dependent entities
+        const locationsCount = await prisma.location.count({
+          where: { zoneId: zoneId },
+        });
+    
+        const chaptersCount = await prisma.chapter.count({
+          where: { zoneId: zoneId },
+        });
+    
+        const zoneRolesCount = await prisma.zoneRole.count({
+          where: { zoneId: zoneId },
+        });
+
+    let dependencies = [];
+    if (locationsCount > 0) {
+      dependencies.push(`${locationsCount} location(s)`);
+    }
+    if (chaptersCount > 0) {
+      dependencies.push(`${chaptersCount} chapter(s)`);
+    }
+    if (zoneRolesCount > 0) {
+      dependencies.push(`${zoneRolesCount} zone role(s)`);
+    }
+
+    if (dependencies.length > 0) {
+      return res.status(400).json({
+        message: `Cannot delete Zone ID ${zoneId}. It is still referenced by ${dependencies.join(", ")}. Please remove or reassign these dependencies first.`,
+      });
+    }
     await prisma.zone.delete({
       where: { id: zoneId },
     });

@@ -247,21 +247,41 @@ exports.deleteZone = async (req, res) => {
       return res.status(400).json({ message: "Invalid Zone ID provided." });
     }
 
-    await prisma.zone.delete({
+          // Check for dependent entities
+          
+      
+          const chaptersCount = await prisma.chapter.count({
+            where: { zoneId: zoneId },
+          });
+      
+    
+  
+      let dependencies = [];
+       
+      if (chaptersCount > 0) {
+        dependencies.push(`${chaptersCount} chapter(s)`);
+      }
+ 
+      if (dependencies.length > 0) {
+        return res.status(400).json({
+          message: `Cannot delete Location ID ${zoneId}. It is still referenced by ${dependencies.join(", ")}. Please remove or reassign these dependencies first.`,
+        });
+      }
+    await prisma.location.delete({
       where: { id: zoneId },
     });
 
-    res.status(200).json({ message: "Zone deleted successfully" });
+    res.status(200).json({ message: "Location deleted successfully" });
   } catch (error) {
     if (error.code === "P2025") {
       return res
         .status(404)
-        .json({ message: `Zone with ID ${req.params.id} not found.` });
+        .json({ message: `Location with ID ${req.params.id} not found.` });
     }
-    console.error(`Error deleting zone with ID ${req.params.id}:`, error);
+    console.error(`Error deleting location with ID ${req.params.id}:`, error);
     res
       .status(500)
-      .json({ message: "Error deleting zone", error: error.message });
+      .json({ message: "Error deleting location", error: error.message });
   }
 };
 
@@ -572,6 +592,18 @@ exports.deleteLocation = async (req, res) => {
       return res.status(400).json({ message: "Invalid Location ID provided." });
     }
 
+    // Check for dependent entities (Chapters)
+    const chaptersCount = await prisma.chapter.count({
+      where: { locationId: locationId },
+    });
+
+    if (chaptersCount > 0) {
+      return res.status(400).json({
+        message: `Cannot delete Location ID ${locationId}. It is still referenced by ${chaptersCount} chapter(s). Please remove or reassign these chapters first.`,
+      });
+    }
+
+    // Proceed with deletion if no dependencies
     await prisma.location.delete({
       where: { id: locationId },
     });
@@ -579,13 +611,22 @@ exports.deleteLocation = async (req, res) => {
     res.status(200).json({ message: "Location deleted successfully" });
   } catch (error) {
     if (error.code === "P2025") {
+      // Record to delete not found
       return res
         .status(404)
         .json({ message: `Location with ID ${req.params.id} not found.` });
+    } else if (error.code === "P2003") {
+      // Foreign key constraint violation
+      console.error(
+        `Foreign key constraint error deleting location ID ${req.params.id}:`,
+        error
+      );
+      return res.status(409).json({
+        message: `Cannot delete Location ID ${req.params.id} due to existing relationships. Please ensure all associated entities (like Chapters) are removed or reassigned.`,
+        details: process.env.NODE_ENV === 'development' ? error.message : 'A database constraint prevented deletion.',
+      });
     }
     console.error(`Error deleting location with ID ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({ message: "Error deleting location", error: error.message });
+    return res.status(500).json({ message: "Error deleting location.", error: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred.' });
   }
 };
