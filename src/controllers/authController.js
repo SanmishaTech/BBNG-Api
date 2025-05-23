@@ -9,6 +9,8 @@ const config = require("../config/config");
 const jwtConfig = require("../config/jwt"); // Corrected: Get secret and expiresIn from here
 const createError = require("http-errors");
 
+const POLICY_TEXT_KEY = "policy"; // Changed to 'policy' for consistency
+
 // Helper function to get user's chapter roles
 const getUserChapterRoles = async (userId) => {
   try {
@@ -224,281 +226,159 @@ const register = async (req, res, next) => {
 };
 
 const login = async (req, res, next) => {
-  // Zod schema for login validation
-  const loginSchema = z.object({
-    email: z.string().email("Invalid email format."),
-    password: z.string().nonempty("Password is required."),
-    // agreedToPolicy removed as it's handled post-login if needed
+  console.log("[LOGIN_TRACE] Attempting login...");
+  const schema = z.object({
+    email: z.string().email("Invalid Email format"),
+    password: z.string().nonempty("Password is required"),
   });
 
   try {
-    // Perform synchronous validation directly
-    const validatedData = loginSchema.parse(req.body);
-    // If parse succeeds, validatedData will contain the data.
-    // If it fails, it will throw a ZodError.
+    console.log("[LOGIN_TRACE] Validating request body...");
+    const validationResult = await validateRequest(schema, req.body, res);
 
-    const { email, password } = validatedData; // Use validatedData, agreedToPolicy removed
-
-    // Get the last update time of the active site policy
-    const activePolicy = await prisma.sitePolicy.findFirst({
-      where: { isActive: true },
-      // No need for orderBy if we strictly maintain only one active policy
-      // orderBy: { updatedAt: 'desc' }, 
-    });
-
-    // Critical: If no active policy is found, it's a configuration error.
-    // For now, we log an error. Depending on requirements, this might need to block login
-    // or default to requiring acceptance if user.policyAcceptedAt is null.
-    if (!activePolicy) {
-      console.error("CRITICAL: No active site policy found during login. Policy re-acceptance logic might not function as expected.");
+    let actualErrors = null;
+    if (typeof validationResult === 'object' && validationResult !== null) {
+      for (const key in validationResult) {
+        if (Object.prototype.hasOwnProperty.call(validationResult, key) &&
+            typeof validationResult[key] === 'object' &&
+            validationResult[key] !== null &&
+            validationResult[key].type === 'validation') {
+          actualErrors = validationResult; // It's the error object
+          break;
+        }
+      }
     }
 
-    // First try to find a member (since members are also users)
-    const member = await prisma.member.findUnique({
-      where: { email },
-      include: {
-        users: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            password: true,
-            role: true,
-            active: true,
-            lastLogin: true,
-            policyAccepted: true,
-            policyAcceptedAt: true, // Include policyAcceptedAt for members
-          },
-        },
-        chapter: true,
-        // Eager load chapterRoles for the member to be used by getUserChapterRoles if called through member path
-        chapterRoles: {
-          select: {
-            roleType: true,
-            chapterId: true,
-          }
-        }
-      },
-    });
-
-    if (member) {
-      if (!member.users) {
-        return res.status(500).json({
-          errors: {
-            message: "Member account is not properly linked to a user account",
-          },
-        });
-      }
-
-      console.log("Member found:", password, member.users.password);
-      // Compare password with the user's password (not member's password)
-      const isValidPassword = await bcrypt.compare(password, member.users.password);
-      console.log("Password match:", isValidPassword);
-      if (!isValidPassword) {
-        return res
-          .status(401)
-          .json({ errors: { message: "Invalid email or password" } });
-      }
-
-      // Check if memberships are expired (hoExpiryDate or venueExpiryDate)
-      const now = new Date();
-      let hasActiveMembership = false;
-      let expiryStatusChanged = false;
-
-      // A user is active ONLY if BOTH venue and HO memberships are set AND at least one is active
-      // If any membership is null, user should be inactive
-
-      // Check if both memberships exist (not null)
-      if (member.venueExpiryDate && member.hoExpiryDate) {
-        // Check if at least one membership is active
-        if (
-          new Date(member.venueExpiryDate) > now ||
-          new Date(member.hoExpiryDate) > now
-        ) {
-          hasActiveMembership = true;
-        }
-      } else {
-        // If any membership is null, user should be inactive
-        hasActiveMembership = false;
-      }
-
-      // If membership status differs from user's active status, update it
-      if (member.users.active !== hasActiveMembership) {
-        console.log(
-          `Updating user ID ${member.users.id} active status to ${hasActiveMembership} during login check`
-        );
-        // await prisma.user.update({
-        //   where: { id: member.users.id },
-        //   data: { active: hasActiveMembership }
-        // });
-
-        // If we're setting to inactive, we need to reject the login
-        if (!hasActiveMembership) {
-          return res.status(403).json({
-            errors: {
-              message: "Account is inactive due to expired membership",
-            },
-          });
-        }
-      }
-
-      // Regular inactive check
-      if (!member.active || !member.users.active) {
-        return res
-          .status(403)
-          .json({ errors: { message: "Account is inactive" } });
-      }
-
-      const token = jwt.sign({ userId: member.users.id }, jwtConfig.secret, {
-        expiresIn: jwtConfig.expiresIn,
-      });
-
-      // Update last login time
-      const updatedUser = await prisma.user.update({
-        where: { id: member.users.id },
-        data: { lastLogin: new Date() },
-      });
-
-      // Prepare user response (excluding password)
-      const userResponse = {
-        id: updatedUser ? updatedUser.id : member.users.id,
-        name: updatedUser ? updatedUser.name : member.users.name,
-        email: updatedUser ? updatedUser.email : member.users.email,
-        role: updatedUser ? updatedUser.role : member.users.role,
-        active: updatedUser ? updatedUser.active : member.users.active,
-        lastLogin: updatedUser ? updatedUser.lastLogin : member.users.lastLogin,
-        policyAccepted: member.users.policyAccepted,
-        policyAcceptedAt: member.users.policyAcceptedAt,
-      };
-
-      const isAdmin = userResponse.role === 'SUPER_ADMIN' || userResponse.role === 'admin';
-      let requiresPolicyAcceptance = false;
-
-      if (!isAdmin) {
-        if (!userResponse.policyAcceptedAt) { // User has never accepted any policy
-          requiresPolicyAcceptance = true;
-        } else if (activePolicy && userResponse.policyAcceptedAt < activePolicy.updatedAt) { // User accepted a version older than the current active policy
-          requiresPolicyAcceptance = true;
-        }
-        // If activePolicy is null (config error), users who previously accepted will not be asked again.
-        // This maintains previous behavior: if they accepted once, they are good unless a newer policy exists.
-      }
-
-      // Get accessible chapters grouped by role categories
-      const accessibleChapters = await getUserAccessibleChapters(member.users.id);
-
-      console.log('[DEBUG login] Sending accessibleChapters in response:', JSON.stringify(accessibleChapters, null, 2));
-      return res.json({
-        accesstoken: token,
-        user: userResponse,
-        isMember: true,
-        accessibleChapters: accessibleChapters,
-        requiresPolicyAcceptance: requiresPolicyAcceptance,
-      });
+    if (actualErrors) {
+      console.log("[LOGIN_TRACE] Validation failed. Sending 400 response.", actualErrors);
+      return res.status(400).json({ errors: actualErrors });
     }
+    console.log("[LOGIN_TRACE] Validation successful.");
 
-    // If no member found, try to find a regular user
+    const validatedData = validationResult;
+    const { email, password } = validatedData;
+
+    console.log(`[LOGIN_TRACE] Attempting to fetch user: ${email}`);
     const user = await prisma.user.findUnique({
       where: { email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        password: true,
-        role: true,
-        active: true,
-        lastLogin: true,
-        policyAccepted: true,
-        policyAcceptedAt: true,
+      include: {
+        member: {
+          include: {
+            memberships: {
+              orderBy: { packageEndDate: "desc" },
+              take: 1,
+            },
+            chapter: true,
+          },
+        },
       },
     });
+    console.log(`[LOGIN_TRACE] User fetched: ${user ? user.id : 'null'}`);
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { message: "Invalid email or password" } });
+      console.log("[LOGIN_TRACE] User not found.");
+      return next(createError(401, "Invalid credentials"));
     }
 
-    // Handle regular user login
-    if (!(await bcrypt.compare(password, user.password))) {
-      return res
-        .status(401)
-        .json({ errors: { message: "Invalid email or password" } });
+    console.log("[LOGIN_TRACE] Comparing password...");
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log(`[LOGIN_TRACE] Password valid: ${isPasswordValid}`);
+    if (!isPasswordValid) {
+      console.log("[LOGIN_TRACE] Invalid password.");
+      return next(createError(401, "Invalid credentials"));
     }
 
+    console.log(`[LOGIN_TRACE] Checking if user active: ${user.active}`);
     if (!user.active) {
-      return res
-        .status(403)
-        .json({ errors: { message: "Account is inactive" } });
+      console.log("[LOGIN_TRACE] User inactive.");
+      return next(createError(403, "Account is inactive. Please contact support."));
     }
 
-    const token = jwt.sign({ userId: user.id }, jwtConfig.secret, {
+    // Policy Acceptance Logic
+    console.log("[LOGIN_TRACE] Starting policy acceptance logic...");
+    let requiresPolicyAcceptance = false;
+    console.log("[LOGIN_TRACE] Fetching site policy setting...");
+    const sitePolicySetting = await prisma.siteSetting.findUnique({
+      where: { key: POLICY_TEXT_KEY },
+    });
+    console.log(`[LOGIN_TRACE] Site policy setting fetched: ${sitePolicySetting ? 'found' : 'not found'}, version: ${sitePolicySetting?.version}`);
+    const activePolicyVersion = sitePolicySetting?.version;
+
+    if (user.role !== "admin") {
+      console.log("[LOGIN_TRACE] User is not admin, evaluating policy acceptance.");
+      if (sitePolicySetting && activePolicyVersion != null) {
+        requiresPolicyAcceptance = user.policyAcceptedVersion == null || user.policyAcceptedVersion < activePolicyVersion;
+        console.log(`[LOGIN_TRACE] Policy set. User accepted version: ${user.policyAcceptedVersion}, Current policy version: ${activePolicyVersion}, Requires acceptance: ${requiresPolicyAcceptance}`);
+      } else {
+        requiresPolicyAcceptance = user.policyAcceptedVersion == null;
+        console.log(`[LOGIN_TRACE] No policy set or no version. User accepted version: ${user.policyAcceptedVersion}, Requires acceptance: ${requiresPolicyAcceptance}`);
+      }
+    } else {
+      console.log("[LOGIN_TRACE] User is admin, skipping policy acceptance check.");
+    }
+    console.log("[LOGIN_TRACE] Policy acceptance logic complete.");
+
+    console.log("[LOGIN_TRACE] Updating lastLogin...");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+    console.log("[LOGIN_TRACE] lastLogin updated.");
+
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+    console.log("[LOGIN_TRACE] Base token payload created.");
+
+    if (user.member) {
+      console.log("[LOGIN_TRACE] User is a member. Processing member details...");
+      tokenPayload.memberId = user.member.id;
+      tokenPayload.chapterId = user.member.chapterId;
+      tokenPayload.isMember = true;
+
+      console.log(`[LOGIN_TRACE] Checking member active status: ${user.member.active}`);
+      if (!user.member.active) {
+        console.log("[LOGIN_TRACE] Member account inactive.");
+        return next(createError(403, "Your membership account is inactive. Please contact support."));
+      }
+
+      const latestMembership = user.member.memberships?.[0];
+      console.log(`[LOGIN_TRACE] Latest membership: ${latestMembership ? 'found' : 'not found'}`);
+      if (latestMembership && new Date(latestMembership.packageEndDate) < new Date()) {
+        console.log("[LOGIN_TRACE] Membership package expired.");
+        return next(createError(403, "Your membership package has expired. Please renew your membership."));
+      }
+      if (!latestMembership) {
+        console.log("[LOGIN_TRACE] No active membership package found for member.");
+      }
+      console.log("[LOGIN_TRACE] Member details processing complete.");
+    } else {
+      tokenPayload.isMember = false;
+      console.log("[LOGIN_TRACE] User is not a member.");
+    }
+
+    console.log("[LOGIN_TRACE] Signing JWT token...");
+    const token = jwt.sign(tokenPayload, jwtConfig.secret, {
       expiresIn: jwtConfig.expiresIn,
     });
+    console.log("[LOGIN_TRACE] JWT token signed.");
 
-    // Update last login time and policy acceptance if needed
-    let updatedUser = null;
-    const dataToUpdate = { lastLogin: new Date() };
+    const { password: _, resetToken: __, resetTokenExpires: ___, ...userWithoutSensitiveData } = user;
 
-    updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: dataToUpdate,
+    console.log("[LOGIN_TRACE] Preparing to send response...");
+    res.json({
+      message: "Login successful",
+      token,
+      user: userWithoutSensitiveData,
+      requiresPolicyAcceptance,
+      memberDetails: user.member,
     });
-
-    // Prepare user response (excluding password)
-    const userResponse = {
-      id: updatedUser ? updatedUser.id : user.id,
-      name: updatedUser ? updatedUser.name : user.name,
-      email: updatedUser ? updatedUser.email : user.email,
-      role: updatedUser ? updatedUser.role : user.role,
-      active: updatedUser ? updatedUser.active : user.active,
-      lastLogin: updatedUser ? updatedUser.lastLogin : user.lastLogin,
-      policyAccepted: updatedUser ? updatedUser.policyAccepted : user.policyAccepted,
-    };
-
-    const isAdmin = userResponse.role === 'SUPER_ADMIN' || userResponse.role === 'admin';
-    let requiresPolicyAcceptance = false;
-
-    if (!isAdmin) {
-      if (!user.policyAcceptedAt) { // User has never accepted any policy
-        requiresPolicyAcceptance = true;
-      } else if (activePolicy && user.policyAcceptedAt < activePolicy.updatedAt) { // User accepted a version older than the current active policy
-        requiresPolicyAcceptance = true;
-      }
-    }
-
-    // Get other chapter roles if the user is linked to a member
-    let otherChapterRoles = [];
-    if (user.memberId) {
-      otherChapterRoles = await getUserChapterRoles(user.id);
-    }
-
-    // Get all chapters user has access to based on their roles
-    const accessibleChapters = await getUserAccessibleChapters(user.id);
-    
-    // Logging to help with debugging
-    console.log("Response sent with accessibleChapters:", JSON.stringify(accessibleChapters));
-    
-    // Format the response exactly as required
-    return res.json({ 
-      token, 
-      user: { 
-        ...userResponse, 
-        otherChapterRoles
-      },
-      accessibleChapters  // This is an array with the required format
-    });
+    console.log("[LOGIN_TRACE] Response should have been sent.");
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Map Zod errors to your desired format
-      const errors = {};
-      error.errors.forEach((err) => {
-        // Assuming path[0] is the field name, adjust if your error structure is different
-        errors[err.path[0]] = err.message;
-      });
-      return res.status(400).json({ errors });
-    }
-    // For other errors, pass to the main error handler
+    console.error("[LOGIN_ERROR] Error during login:", error);
     next(error);
   }
 };
@@ -591,14 +471,12 @@ const resetPassword = async (req, res, next) => {
 // Controller to get the site policy text
 const getPolicyText = async (req, res, next) => {
   try {
-    console.log("ASDsdasd")
     const policySetting = await prisma.siteSetting.findUnique({
-      where: { key: "policy" },
+      where: { key: POLICY_TEXT_KEY }, // Use the defined constant
     });
-    console.log(policySetting)
 
-    if (!policySetting || !policySetting.value) {
-      return next(createError(404, "Policy text not found."));
+    if (!policySetting || typeof policySetting.value !== 'string') {
+      return next(createError(404, "Policy text not found or is not in the correct format."));
     }
 
     res.json({ policyText: policySetting.value });
@@ -616,11 +494,26 @@ const acceptPolicy = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized: User ID not found in token.' });
     }
 
+    // Get the current policy version from SiteSetting
+    const sitePolicySetting = await prisma.siteSetting.findUnique({
+      where: { key: POLICY_TEXT_KEY },
+    });
+
+    if (!sitePolicySetting || sitePolicySetting.version == null) {
+      // This case means policy isn't configured properly in settings, or version is missing.
+      // It's an internal issue if acceptPolicy is called when no policy/version exists.
+      console.error(`Attempted to accept policy, but no policy/version found in SiteSetting for key: ${POLICY_TEXT_KEY}`);
+      return next(createError(500, "Could not accept policy: Policy configuration error."));
+    }
+
+    const currentPolicyVersion = sitePolicySetting.version;
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         policyAccepted: true,
         policyAcceptedAt: new Date(),
+        policyAcceptedVersion: currentPolicyVersion, // Store the version of the policy they accepted
       },
       select: { // Select only the fields safe to return
         id: true,
@@ -631,7 +524,7 @@ const acceptPolicy = async (req, res, next) => {
         lastLogin: true,
         policyAccepted: true,
         policyAcceptedAt: true,
-        // Add other relevant fields from your user model that are safe to expose
+        policyAcceptedVersion: true,
       },
     });
 

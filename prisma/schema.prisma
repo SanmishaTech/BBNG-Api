@@ -23,6 +23,7 @@ model User {
   // Policy Acceptance Fields
   policyAccepted    Boolean   @default(false)
   policyAcceptedAt  DateTime?
+  policyAcceptedVersion Int?
 
   member   Member? @relation("UserMemberRelation")
   memberId Int? // This field still exists. If Member.userId is the true FK for the user, this might be redundant or for a different purpose.
@@ -32,17 +33,6 @@ model User {
   zoneRoleHistoriesPerformed ZoneRoleHistory[] @relation("UserPerformedZoneRoleHistory")
 
   @@map("users")
-}
-
-model SitePolicy {
-  id        Int      @id @default(autoincrement())
-  text      String   @db.Text // Use @db.Text for potentially long policy content
-  version   Int      @default(1) // Simple versioning, increment on update
-  isActive  Boolean  @default(true) // To mark the currently active policy
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // Tracks when this policy record itself was last modified
-
-  @@map("site_policies")
 }
 
 model Zone {
@@ -104,7 +94,8 @@ model subCategory {
 model SiteSetting {
   id    Int    @id @default(autoincrement())
   key   String @unique
-  value String
+  value String @db.Text // Changed to Text to accommodate potentially long policy text
+  version Int?   @default(1) // Added for policy versioning
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,8 +105,10 @@ model SiteSetting {
 
 model Training {
   id            Int      @id @default(autoincrement())
-  trainingDate  DateTime
-  trainingTopic String
+  date          DateTime
+  time          String
+  title         String
+  venue         String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -194,7 +187,7 @@ model Member {
   businessCategory        String
   gender                  String
   dateOfBirth             DateTime
-  mobile1                 String
+  mobile1                 String @unique
   mobile2                 String?
   gstNo                   String?
   organizationName        String
@@ -578,9 +571,9 @@ model ThankYouSlip {
   referenceId Int?
   reference   Reference? @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  // Chapter relationship
-  chapterId Int
-  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  // Chapter relationship (now optional)
+  chapterId Int? 
+  chapter   Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade, onUpdate: Cascade) 
 
   // Member who created this thank you slip (optional for backward compatibility)
   fromMemberId Int?

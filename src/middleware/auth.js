@@ -19,9 +19,9 @@ module.exports = async (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, secret);
-    console.log('[AuthMiddleware] Token decoded. User ID from token:', decoded?.userId);
+    console.log('[AuthMiddleware] Token decoded. User ID from token:', decoded?.id);
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: decoded.id },
     });
     console.log('[AuthMiddleware] User fetched from DB:', user ? `User ID: ${user.id}, Role: ${user.role}` : 'User NOT FOUND in DB');
     if (!user) {

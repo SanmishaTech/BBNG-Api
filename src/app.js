@@ -47,6 +47,7 @@ app.use(
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy:
       process.env.NODE_ENV === "production" ? undefined : false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource sharing
   })
 );
 

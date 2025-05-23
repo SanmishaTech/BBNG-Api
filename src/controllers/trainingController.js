@@ -11,25 +11,37 @@ const getTrainings = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const search = req.query.search || "";
-    const sortBy = req.query.sortBy || "trainingDate";
-    const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
-    
-    // Build the where clause for filtering
+    let sortBy = req.query.sortBy || 'date'; // Default sort by new 'date' field
+    const sortOrder = req.query.sortOrder || 'desc';
+    const search = req.query.search || '';
+
+    // Map old sortBy values to new field names if necessary
+    if (sortBy === 'trainingDate') {
+      sortBy = 'date';
+    }
+    if (sortBy === 'trainingTopic') {
+      sortBy = 'title';
+    }
+
+    const offset = (page - 1) * limit;
+
     const whereClause = {
       OR: [
-        { trainingTopic: { contains: search } }
+        { title: { contains: search } }, // Search by the new 'title' field
+        // If you want to search by other fields, add them here
+        // { venue: { contains: search } },
       ]
     };
-    
+
     const trainings = await prisma.training.findMany({
       where: whereClause,
-      skip,
+      skip: offset,
       take: limit,
-      orderBy: { [sortBy]: sortOrder }
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
     });
-    
+
     const totalTrainings = await prisma.training.count({
       where: whereClause
     });
@@ -42,6 +54,7 @@ const getTrainings = async (req, res, next) => {
       totalTrainings
     });
   } catch (error) {
+    console.error("Error in getTrainings:", error); // Detailed logging
     next(createError(500, "Failed to fetch trainings", { cause: error }));
   }
 };
@@ -83,13 +96,15 @@ const createTraining = async (req, res, next) => {
   
   // Define Zod schema for training creation
   const schema = z.object({
-    trainingDate: z.string()
+    date: z.string()
       .refine(val => !isNaN(Date.parse(val)), {
-        message: "Training date must be a valid date"
+        message: "Date is required and must be a valid date"
       }),
-    trainingTopic: z.string()
-      .min(1, "Training topic cannot be empty")
-      .max(255, "Training topic must not exceed 255 characters")
+    time: z.string().min(1, "Time is required").max(50),
+    title: z.string()
+      .min(1, "Title is required")
+      .max(255, "Title must not exceed 255 characters"),
+    venue: z.string().min(1, "Venue is required").max(255),
   });
 
   console.log('Create Training - Validating request data');
@@ -106,8 +121,10 @@ const createTraining = async (req, res, next) => {
     
     const newTraining = await prisma.training.create({
       data: {
-        trainingDate: new Date(validatedData.trainingDate),
-        trainingTopic: validatedData.trainingTopic
+        date: new Date(validatedData.date),
+        time: validatedData.time,
+        title: validatedData.title,
+        venue: validatedData.venue,
       }
     });
     
@@ -120,7 +137,7 @@ const createTraining = async (req, res, next) => {
     // Handle specific error types
     if (error.code === 'P2002') {
       return res.status(400).json({
-        errors: { message: "A training with this date and topic already exists" }
+        errors: { message: "A training with this date and title already exists" }
       });
     }
     
@@ -144,15 +161,23 @@ const updateTraining = async (req, res, next) => {
   
   // Define Zod schema for training update
   const schema = z.object({
-    trainingDate: z.string()
+    date: z.string()
       .refine(val => !isNaN(Date.parse(val)), {
-        message: "Training date must be a valid date"
+        message: "Date must be a valid date"
       })
       .optional(),
-    trainingTopic: z.string()
-      .min(1, "Training topic cannot be empty")
-      .max(255, "Training topic must not exceed 255 characters")
-      .optional()
+    time: z.string()
+      .min(1, "Time cannot be empty")
+      .max(50, "Time must not exceed 50 characters")
+      .optional(),
+    title: z.string()
+      .min(1, "Title cannot be empty")
+      .max(255, "Title must not exceed 255 characters")
+      .optional(),
+    venue: z.string()
+      .min(1, "Venue cannot be empty")
+      .max(255, "Venue must not exceed 255 characters")
+      .optional(),
   }).refine(data => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update"
   });
@@ -182,12 +207,20 @@ const updateTraining = async (req, res, next) => {
     
     const data = {};
     
-    if (validatedData.trainingDate) {
-      data.trainingDate = new Date(validatedData.trainingDate);
+    if (validatedData.date) {
+      data.date = new Date(validatedData.date);
     }
     
-    if (validatedData.trainingTopic) {
-      data.trainingTopic = validatedData.trainingTopic;
+    if (validatedData.time) {
+      data.time = validatedData.time;
+    }
+    
+    if (validatedData.title) {
+      data.title = validatedData.title;
+    }
+
+    if (validatedData.venue) {
+      data.venue = validatedData.venue;
     }
     
     const updatedTraining = await prisma.training.update({

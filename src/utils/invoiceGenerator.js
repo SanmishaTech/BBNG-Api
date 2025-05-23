@@ -106,7 +106,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
               {
                   width: '50%',
                   stack: [
-                      // { text: 'Bill To:', style: 'subheader', margin: [0, 0, 0, 5] },
+                      { text: 'To,', style: 'subheader', margin: [0, 0, 0, 5] },
                       { text: member.memberName, style: 'subheader' },
                       { text: memberAddress, style: 'normalText' },
                       { text: `${member.city || ''}${member.pincode ? ' - ' + member.pincode : ''}`, style: 'normalText'},
@@ -250,7 +250,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
 
       // Thank You Note
       {
-        text: 'Thank you for your business!',
+        text: 'Thank you for joining BBN Global Association',
         style: 'thankYouText',
         alignment: 'center',
         margin: [0, 0, 0, 20]
