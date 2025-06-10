@@ -80,8 +80,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
 
   // Company details from image (can be passed in bbnGlobal or hardcoded/configured elsewhere)
   const companyDetails = bbnGlobal || {
-    logoPath: path.join(__dirname, '..', "..",'assets', 'brandlogo.png'), // Ensure this path is correct and image exists
-    name: 'BBN Global',
+     name: 'BBN Global',
     addressLines: ['2/3, Gomati Apartment,', 'Boy\'s Town Road, Nashik, Maharashtra - 422002'],
     gstinUin: '27AAHCB7744A1ZT',
     email: 'bbnglobal.ho@gmail.com',
@@ -98,13 +97,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
  
       // Top section: Client details on left, Company details on right
       // 1. Logo (conditionally added)
-      ...(companyDetails.logoPath && fs.existsSync(companyDetails.logoPath) ? [{
-          image: companyDetails.logoPath,
-          width: 150, // Adjusted width
-          alignment: 'left', // Logo alignment
-          margin: [0, 0, 0, 20] // Margin: [Left, Top, Right, Bottom]
-      }] : [{text: '', margin: [0,0,0,70]}]), // Placeholder if logo not found, provide some space
-      // 2. "Tax Invoice" Header
+       // 2. "Tax Invoice" Header
      
       // 3. Client and Company Details section
       {
@@ -113,7 +106,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
               {
                   width: '50%',
                   stack: [
-                      // { text: 'Bill To:', style: 'subheader', margin: [0, 0, 0, 5] },
+                      { text: 'To,', style: 'subheader', margin: [0, 0, 0, 5] },
                       { text: member.memberName, style: 'subheader' },
                       { text: memberAddress, style: 'normalText' },
                       { text: `${member.city || ''}${member.pincode ? ' - ' + member.pincode : ''}`, style: 'normalText'},
@@ -257,7 +250,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
 
       // Thank You Note
       {
-        text: 'Thank you for your business!',
+        text: 'Thank you for joining BBN Global Association',
         style: 'thankYouText',
         alignment: 'center',
         margin: [0, 0, 0, 20]

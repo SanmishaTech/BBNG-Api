@@ -315,10 +315,16 @@ const createMember = asyncHandler(async (req, res) => {
               id: true,
               name: true,
               location: {
-                select: { id: true, location: true },
+                select: {
+                  id: true,
+                  location: true,
+                },
               },
               zones: {
-                select: { id: true, name: true },
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
@@ -1257,6 +1263,7 @@ const searchMembers = async (req, res, next) => {
       category,
       businessCategory,
       chapterId, // Accept chapterId as a query parameter
+      chapterName, // Accept chapterName as a query parameter
       sortBy = "memberName",
       sortOrder = "asc",
     } = req.query;
@@ -1277,6 +1284,16 @@ const searchMembers = async (req, res, next) => {
       }
     }
 
+    // Add chapterName filter if provided
+    if (chapterName) {
+      where.chapter = {
+        name: {
+          contains: chapterName,
+          mode: 'insensitive', // Optional: for case-insensitive search
+        },
+      };
+    }
+
     // Add category filter if provided
     if (category) {
       where.category = category;
@@ -1291,8 +1308,7 @@ const searchMembers = async (req, res, next) => {
     if (search) {
       where.OR = [
         { memberName: { contains: search } },
-        { email: { contains: search } },
-        { organizationName: { contains: search } },
+         { organizationName: { contains: search } },
         { businessCategory: { contains: search } },
         { specificGive: { contains: search } },
         { specificAsk: { contains: search } },
@@ -1333,6 +1349,7 @@ const searchMembers = async (req, res, next) => {
         users: {
           select: {
             lastLogin: true,
+            role: true // Select the 'role' field (String) directly from the User model
           },
         },
       },
@@ -1409,16 +1426,209 @@ const getCurrentMemberProfile = async (req, res) => {
   }
 };
 
+const getMemberActivitySummary = asyncHandler(async (req, res, next) => {
+  const { memberId } = req.params;
+  const id = parseInt(memberId, 10);
+
+  if (isNaN(id)) {
+    return next(createError(400, "Invalid member ID supplied."));
+  }
+
+  try {
+    const memberExists = await prisma.member.findUnique({
+      where: { id },
+    });
+
+    if (!memberExists) {
+      return next(createError(404, "Member not found."));
+    }
+
+    // 1. Testimonials RECEIVED BY the member
+    // Count ThankYouSlips where this member is the recipient (toWhomId)
+    // and there is a non-empty testimony.
+    const testimonials = await prisma.thankYouSlip.count({
+      where: {
+        toWhomId: id, // Member for whom the testimony is written
+        testimony: {
+           not: "", // Ensure testimony is not an empty string
+        },
+      },
+    });
+
+    // 2. Business Given (sourced ONLY from ThankYouSlip)
+    // Sum of 'amount' from ThankYouSlips GIVEN BY this member.
+    const thankYouSlipsGiven = await prisma.thankYouSlip.findMany({
+      where: { fromMemberId: id }, // Slips given by this member
+      select: { amount: true },
+    });
+    const businessGiven = thankYouSlipsGiven.reduce(
+      (sum, slip) => sum + (parseFloat(slip.amount) || 0),
+      0,
+    );
+
+    // 3. Business Received (sourced ONLY from ThankYouSlip)
+    // Sum of 'amount' from ThankYouSlips RECEIVED BY this member.
+    const thankYouSlipsReceived = await prisma.thankYouSlip.findMany({
+      where: { toWhomId: id }, // Slips received by this member
+      select: { amount: true },
+    });
+    const businessReceived = thankYouSlipsReceived.reduce(
+      (sum, slip) => sum + (parseFloat(slip.amount) || 0),
+      0,
+    );
+
+    // 4. References Given
+    // Count of references GIVEN BY this member.
+    const referencesGiven = await prisma.reference.count({
+      where: { giverId: id }, // Corrected field name
+    });
+
+    // 5. References Received
+    // Count of references RECEIVED BY this member.
+    const referencesReceived = await prisma.reference.count({
+      where: { receiverId: id }, // Corrected field name
+    });
+
+    // 6. One-to-Ones
+    // Count of OneToOne meetings involving this member.
+    const oneToOnes = await prisma.oneToOne.count({
+      where: {
+        OR: [
+          { requesterId: id }, // Corrected field name
+          { requestedId: id }, // Corrected field name
+        ],
+      },
+    });
+
+    res.status(200).json({
+      testimonials,
+      businessGiven,
+      businessReceived,
+      referencesGiven,
+      referencesReceived,
+      oneToOnes,
+    });
+  } catch (error) {
+    console.error("Error in getMemberActivitySummary:", error);
+    // Check if it's a Prisma known error for specific handling if needed
+    if (error.code && error.clientVersion) { // Basic check for Prisma error structure
+        // Log more detailed Prisma error if available
+        console.error(`Prisma Error Code: ${error.code}, Meta: ${JSON.stringify(error.meta)}`);
+    }
+    return next(createError(500, "Server error while fetching activity summary."));
+  }
+});
+
+const getMemberTestimonials = asyncHandler(async (req, res, next) => {
+  const { memberName } = req.params;
+
+  if (!memberName) {
+    return next(createError(400, "Member name is required."));
+  }
+
+  try {
+    const thankYouSlips = await prisma.thankYouSlip.findMany({
+      where: {
+        toWhom: memberName,
+        testimony: {
+          not: null, // Ensure testimony exists
+          notIn: [''], // Ensure testimony is not an empty string
+        },
+      },
+      include: {
+        fromMember: { // Include the member who gave the thank you slip
+          select: {
+            id: true,
+            memberName: true, // Assuming the Member model has a 'memberName' field
+            profilePicture: true, // Optional: if you want to include author's avatar
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc', // Optional: order by creation date
+      },
+      take: 20, // Optional: limit the number of testimonials returned
+    });
+
+    if (!thankYouSlips || thankYouSlips.length === 0) {
+      return res.status(200).json([]); // Return empty array if no testimonials found
+    }
+
+    const testimonials = thankYouSlips.map(slip => ({
+      id: slip.id.toString(), // Ensure ID is a string for React keys
+      text: slip.testimony,
+      author: slip.fromMember ? slip.fromMember.memberName : 'Anonymous', // Handle if fromMember is not available
+      // authorAvatar: slip.fromMember ? slip.fromMember.profilePicture : undefined, // Optional
+      // date: slip.createdAt, // Optional: if you want to include the date of the testimonial
+    }));
+
+    res.status(200).json(testimonials);
+  } catch (error) {
+    console.error("Error fetching member testimonials:", error);
+    next(createError(500, "Server error while fetching testimonials."));
+  }
+});
+
+const getReceivedTestimonialsForMember = asyncHandler(async (req, res, next) => {
+  const { memberId } = req.params;
+
+  if (!memberId || isNaN(parseInt(memberId))) {
+    return next(createError(400, "Valid Member ID is required."));
+  }
+  const numericMemberId = parseInt(memberId);
+
+  try {
+    const thankYouSlips = await prisma.thankYouSlip.findMany({
+      where: {
+        toWhomId: numericMemberId, // Testimonials received by this member
+        testimony: {              // 'testimony' is non-nullable in the schema
+          not: "",                 // Ensure it's not an empty string
+        },
+      },
+      include: {
+        fromMember: { // Details of the member who GAVE the testimonial
+          select: {
+            id: true,
+            memberName: true,
+            profilePicture: true, // Select profilePicture directly from Member
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const formattedTestimonials = thankYouSlips.map(slip => ({
+      id: slip.id.toString(), // Ensure ID is a string for React keys
+      user: {
+        name: slip.fromMember?.memberName || "Anonymous Giver",
+        avatar: slip.fromMember?.profilePicture || "https://via.placeholder.com/100", // Use direct profilePicture and provide a default
+      },
+      content: slip.testimony,
+      time: slip.createdAt.toISOString(), // Using ISO string for full date-time, frontend can format
+    }));
+
+    res.status(200).json(formattedTestimonials);
+  } catch (error) {
+    console.error("Error fetching received testimonials for member:", error);
+    next(createError(500, "Server error while fetching received testimonials."));
+  }
+});
+
 module.exports = {
   createMember,
   getMembers,
   getMemberById,
   updateMember,
   deleteMember,
-  updateProfilePictures, // Based on file summary
-  deleteProfilePicture, // Based on file summary
+  updateProfilePictures,
+  deleteProfilePicture,
   getProfilePicture,
   getMemberDetailsForReference,
   searchMembers,
   getCurrentMemberProfile,
+  getMemberActivitySummary,
+  getMemberTestimonials,
+  getReceivedTestimonialsForMember,
 };

@@ -97,15 +97,15 @@ exports.getMembersByChapter = async (req, res) => {
 // Thank you slip validation schema
 const thankYouSlipSchema = z.object({
   referenceId: z.string().or(z.number()).transform(val => parseInt(val)).optional(),
-  date: z.string().refine(val => !isNaN(new Date(val).getTime()), {
-    message: 'Invalid date format',
+  date: z.string().transform(str => new Date(str)).refine(dt => dt instanceof Date && !isNaN(dt.valueOf()), {
+    message: 'Invalid date format. Please provide a valid date string.',
   }),
-  chapterId: z.string().or(z.number()).transform(val => parseInt(val)),
-  toWhom: z.string().min(1, 'To Whom is required'),
+  chapterId: z.string().or(z.number()).transform(val => parseInt(val)).optional(),
+  toWhom: z.string().optional(), // Made optional, allows empty string if provided
   toWhomId: z.string().or(z.number()).transform(val => parseInt(val)).optional(),
-  amount: z.string().min(1, 'Amount is required'),
-  narration: z.string().min(1, 'Narration is required'),
-  testimony: z.string().min(1, 'Testimony is required'),
+  amount: z.string().min(1, 'Amount is required'), // Amount remains required and non-empty
+  narration: z.string().optional(), // Made optional, allows empty string if provided
+  testimony: z.string().optional(), // Made optional, allows empty string if provided
 });
 
 // Create a new thank you slip
@@ -121,8 +121,30 @@ exports.createThankYouSlip = async (req, res) => {
     
     const { referenceId, date, chapterId, toWhom, toWhomId, amount, narration, testimony } = validatedData;
 
-    // Parse date
-    const parsedDate = new Date(date);
+    // Additional explicit checks for critical fields
+    const fieldErrors = {};
+    if (!(date instanceof Date) || isNaN(date.valueOf())) {
+      fieldErrors.date = 'Date is invalid or could not be processed correctly.';
+    }
+    if (validatedData.toWhom !== undefined && typeof validatedData.toWhom !== 'string') { // Check type if provided
+      fieldErrors.toWhom = 'If To Whom is provided, it must be a string.';
+    }
+    if (typeof amount !== 'string' || amount.trim() === '') { // Amount remains strictly checked
+      fieldErrors.amount = 'Amount is required and must be a non-empty string.';
+    }
+    if (validatedData.narration !== undefined && typeof validatedData.narration !== 'string') { // Check type if provided
+      fieldErrors.narration = 'If Narration is provided, it must be a string.';
+    }
+    if (validatedData.testimony !== undefined && typeof validatedData.testimony !== 'string') { // Check type if provided
+      fieldErrors.testimony = 'If Testimony is provided, it must be a string.';
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      return res.status(400).json({ message: "Validation failed due to invalid field data", errors: fieldErrors });
+    }
+
+    // 'date' is already a Date object due to Zod transform if validation passed
+    const parsedDate = date;
 
     // Get the current user's member ID
     const userId = req.user.id;
@@ -135,13 +157,15 @@ exports.createThankYouSlip = async (req, res) => {
       return res.status(404).json({ error: 'Member profile not found for current user' });
     }
 
-    // Verify chapter exists
-    const chapter = await prisma.chapter.findUnique({
-      where: { id: chapterId },
-    });
+    // Verify chapter exists, only if chapterId is provided
+    if (chapterId) {
+      const chapter = await prisma.chapter.findUnique({
+        where: { id: chapterId },
+      });
 
-    if (!chapter) {
-      return res.status(404).json({ error: 'Chapter not found' });
+      if (!chapter) {
+        return res.status(404).json({ error: 'Chapter not found' });
+      }
     }
 
     let reference = null;
@@ -186,21 +210,49 @@ exports.createThankYouSlip = async (req, res) => {
       });
     }
 
-    // Create the thank you slip
+    // Determine the true giver and receiver for the thank you slip
+    let slipGiverMemberId;
+    let slipReceiverMemberId;
+    let slipReceiverName;
+    let slipAmount = amount; // Default to form amount
+    let slipNarration = narration; // Default to form narration
+    let slipTestimony = testimony; // Default to form testimony
+
+    if (referenceId && reference) { // This is a "Done Deal" slip tied to a reference
+      if (!reference.giver || !reference.receiver) {
+        return res.status(404).json({ error: 'Reference giver or receiver not found for the Done Deal.' });
+      }
+      slipGiverMemberId = reference.giver.id;
+      slipReceiverMemberId = reference.receiver.id;
+      slipReceiverName = reference.receiver.memberName;
+      // For Done Deals, you might have specific logic for amount, narration, testimony
+      // For now, we'll still use the values from the form (validatedData)
+      // If these should also come from the reference or have defaults, that logic would be added here.
+    } else { // This is a direct thank you slip
+      slipGiverMemberId = member.id; // Logged-in user is the giver
+      slipReceiverMemberId = toWhomId; // From form input
+      slipReceiverName = toWhom;     // From form input
+    }
+
+    // Create the thank you slip data object
     const thankYouSlipData = {
       date: parsedDate,
-      chapterId,
-      fromMemberId: member.id,
-      toWhom,
-      toWhomId,
-      amount,
-      narration,
-      testimony
+      fromMemberId: slipGiverMemberId,
+      toWhom: slipReceiverName,
+      toWhomId: slipReceiverMemberId,
+      amount: slipAmount,
+      narration: slipNarration,
+      testimony: slipTestimony,
     };
 
-    // Only add referenceId if it exists
+    // Only add referenceId if it exists (it will if it's a Done Deal)
     if (referenceId) {
       thankYouSlipData.referenceId = referenceId;
+    }
+
+    // Only add chapterId if it exists (relevant if schema makes it optional)
+    if (chapterId) {
+      thankYouSlipData.chapterId = chapterId;
     }
 
     const newThankYouSlip = await prisma.thankYouSlip.create({
@@ -267,14 +319,16 @@ exports.getAllThankYouSlips = async (req, res) => {
     
     // Apply different filtering based on the type
     if (type === 'given') {
-      // Thank you slips created by the user's chapter (given)
-      where.chapterId = memberDetails.chapterId;
+      // Thank you slips created by the user (given)
+      where.fromMemberId = memberDetails.id;
     } else if (type === 'received') {
       // Thank you slips where the user is the recipient (received)
-      // Use exact match for the member name since case-insensitive contains is not supported
-      where.toWhom = memberDetails.memberName;
+      // This branch might be superseded by getReceivedThankYouSlips, but let's correct it too.
+      where.toWhomId = memberDetails.id;
     } else {
       // If type is 'all' or not specified, show thank you slips from user's chapter
+      // This 'all' logic might need review based on desired behavior.
+      // For now, it remains filtering by chapterId.
       where.chapterId = memberDetails.chapterId;
     }
 
@@ -386,13 +440,13 @@ exports.getReceivedThankYouSlips = async (req, res) => {
             giver: {
               select: {
                 id: true,
-                memberName: true
+                memberName: true,
               }
             },
             receiver: {
               select: {
                 id: true,
-                memberName: true
+                memberName: true,
               }
             }
           }

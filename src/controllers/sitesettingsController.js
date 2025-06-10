@@ -13,6 +13,8 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest"); // Assuming this utility exists based on userController
 
+const POLICY_TEXT_KEY = "policy"; // Define the special key for policy text
+
 // --- Zod Schemas ---
 const siteSettingCreateSchema = z.object({
   key: z.string().min(1, "Key is required.")
@@ -172,13 +174,39 @@ exports.updateSetting = async (req, res, next) => {
 
     const { key, value } = validationResult; // Use validated data
 
-    // Ensure key is trimmed before updating
+    // Ensure key is trimmed
     const trimmedKey = key.trim();
-    const updatedSetting = await prisma.siteSetting.update({
-      where: { id: settingId },
-      data: { key: trimmedKey, value: value },
-    });
-    res.status(200).json(updatedSetting);
+
+    if (trimmedKey === POLICY_TEXT_KEY) {
+      // Special handling for site policy text, now stored directly in SiteSetting
+      // The 'id' here is the ID of the SiteSetting record for the policy text.
+      const currentPolicySetting = await prisma.siteSetting.findUnique({
+        where: { id: settingId },
+      });
+
+      if (!currentPolicySetting) {
+        return res.status(404).json({ errors: { message: `Site setting for policy text with ID ${settingId} not found.` } });
+      }
+
+      const newVersion = (currentPolicySetting.version || 0) + 1;
+
+      const updatedPolicySetting = await prisma.siteSetting.update({
+        where: { id: settingId },
+        data: {
+          value: value, // New policy text
+          version: newVersion, // Incremented version
+        },
+      });
+      res.status(200).json(updatedPolicySetting);
+
+    } else {
+      // Default behavior for all other site settings
+      const updatedSetting = await prisma.siteSetting.update({
+        where: { id: settingId },
+        data: { key: trimmedKey, value: value },
+      });
+      res.status(200).json(updatedSetting);
+    }
 
   } catch (error) {
     if (error.code === 'P2025') {

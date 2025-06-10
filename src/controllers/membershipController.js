@@ -102,25 +102,43 @@ const getFinancialYearEndDate = (date = new Date()) => {
 };
 
 /**
- * Generate a unique invoice number based on financial year
- * Format: FY23-24/001 (financial year + sequential number)
+ * Generate a unique invoice number based on financial year.
+ * Format: YYYY-NNN (e.g., 2324-001)
  */
 const generateInvoiceNumber = async (invoiceDate) => {
-  const financialYear = getFinancialYearCode(invoiceDate);
-  
-  // Get count of existing invoices for this financial year
-  const invoiceCount = await prisma.membership.count({
+  const financialYear = getFinancialYearCode(invoiceDate); // e.g., "2324"
+
+  // Find all memberships in the current financial year to get their invoice numbers
+  const membershipsThisFY = await prisma.membership.findMany({
     where: {
       invoiceNumber: {
-        startsWith: financialYear
-      }
-    }
+        startsWith: financialYear + "-", // Match "YYYY-" to be precise
+      },
+    },
+    select: {
+      invoiceNumber: true,
+    },
   });
-  
+
+  let maxSeq = 0;
+  if (membershipsThisFY.length > 0) {
+    membershipsThisFY.forEach(membership => {
+      // Expected format: YYYY-NNN
+      const parts = membership.invoiceNumber.split('-');
+      if (parts.length === 2) {
+        const seqPart = parseInt(parts[1], 10);
+        if (!isNaN(seqPart) && seqPart > maxSeq) {
+          maxSeq = seqPart;
+        }
+      }
+    });
+  }
+
+  const nextSeq = maxSeq + 1;
   // Create sequential number padded with leading zeros (001, 002, etc.)
-  const sequentialNumber = (invoiceCount + 1).toString().padStart(5, '0');
-  
-  // Final invoice number format: 2324-001
+  const sequentialNumber = nextSeq.toString().padStart(5, '0'); // Pad to 3 digits
+
+  // Final invoice number format: e.g., 2324-001
   return `${financialYear}-${sequentialNumber}`;
 };
 
@@ -677,7 +695,7 @@ const deleteMembership = asyncHandler(async (req, res) => {
   const updateMemberData = {};
   
   // If this membership's end date is the same as the member's current expiry date,
-  // we need to reset it or find the next most recent membership end date
+  // we need to reset it or find the next most recent active membership end date
   if (membership.package.isVenueFee && 
       member.venueExpiryDate && 
       new Date(member.venueExpiryDate).getTime() === new Date(membership.packageEndDate).getTime()) {

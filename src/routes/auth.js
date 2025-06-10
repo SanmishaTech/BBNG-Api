@@ -2,6 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 const authController = require("../controllers/authController");
+const auth = require('../middleware/auth'); // Assuming middleware path and name
 
 /**
  * @swagger
@@ -163,6 +164,58 @@ router.post("/reset-password/:token", authController.resetPassword);
  *       200:
  *         description: Logged out successfully
  */
+/**
+ * @swagger
+ * /auth/policy-text:
+ *   get:
+ *     summary: Get the site policy text
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved policy text
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 policyText:
+ *                   type: string
+ *                   description: The site policy text
+ *       404:
+ *         description: Policy text not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/policy-text", authController.getPolicyText);
+
+/**
+ * @swagger
+ * /auth/accept-policy:
+ *   patch:
+ *     summary: Accept the site policy
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: [] # Indicates that this endpoint requires Bearer token authentication
+ *     responses:
+ *       200:
+ *         description: Policy accepted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   description: Updated user object
+ *       401:
+ *         description: Unauthorized (token missing or invalid)
+ *       500:
+ *         description: Internal server error
+ */
+router.patch("/accept-policy", auth, authController.acceptPolicy);
+
 router.post("/logout", (req, res) => {
   res.json({ message: "Logged out" });
 });

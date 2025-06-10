@@ -695,4 +695,120 @@ router.get(
   memberController.getMemberDetailsForReference
 );
 
+/**
+ * @swagger
+ * /api/members/{memberId}/activity-summary:
+ *   get:
+ *     summary: Get a summary of member activities
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the member
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved activity summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 testimonials: 
+ *                   type: integer
+ *                   description: Count of testimonials received.
+ *                 businessGiven: 
+ *                   type: number
+ *                   format: double
+ *                   description: Total amount of business given.
+ *                 businessReceived: 
+ *                   type: number
+ *                   format: double
+ *                   description: Total amount of business received.
+ *                 referencesGiven: 
+ *                   type: integer
+ *                   description: Count of references given.
+ *                 referencesReceived: 
+ *                   type: integer
+ *                   description: Count of references received.
+ *                 oneToOnes: 
+ *                   type: integer
+ *                   description: Count of one-to-one meetings.
+ *       400:
+ *         description: Invalid member ID supplied
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Member not found
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  "/:memberId/activity-summary",
+  auth,
+  memberController.getMemberActivitySummary
+);
+
+/**
+ * @swagger
+ * /api/members/{memberId}/received-testimonials:
+ *   get:
+ *     summary: Get testimonials received by a specific member
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the member whose received testimonials are to be fetched.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved received testimonials.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: The ID of the testimonial (ThankYouSlip ID).
+ *                   user:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         description: Name of the member who gave the testimonial.
+ *                       avatar:
+ *                         type: string
+ *                         format: uri
+ *                         description: URL of the profile picture of the member who gave the testimonial.
+ *                   content:
+ *                     type: string
+ *                     description: The text content of the testimonial.
+ *                   time:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The timestamp when the testimonial was created.
+ *       400:
+ *         description: Invalid member ID supplied.
+ *       401:
+ *         description: Unauthorized.
+ *       500:
+ *         description: Server error.
+ */
+router.get(
+  "/:memberId/received-testimonials",
+  auth,
+  memberController.getReceivedTestimonialsForMember
+);
+
 module.exports = router;
