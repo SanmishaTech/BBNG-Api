@@ -43397,9 +43397,9 @@ const SC = (e, n) => {
         return n.date({ width: "short" });
       case "PP":
         return n.date({ width: "medium" });
-      case "PPP":
+      case "dd/MM/yyyy":
         return n.date({ width: "long" });
-      case "PPPP":
+      case "dd/MM/yyyyP":
       default:
         return n.date({ width: "full" });
     }
@@ -43410,9 +43410,9 @@ const SC = (e, n) => {
         return n.time({ width: "short" });
       case "pp":
         return n.time({ width: "medium" });
-      case "ppp":
+      case "dd/MM/yyyy":
         return n.time({ width: "long" });
-      case "pppp":
+      case "dd/MM/yyyyp":
       default:
         return n.time({ width: "full" });
     }
@@ -43430,10 +43430,10 @@ const SC = (e, n) => {
       case "PP":
         l = n.dateTime({ width: "medium" });
         break;
-      case "PPP":
+      case "dd/MM/yyyy":
         l = n.dateTime({ width: "long" });
         break;
-      case "PPPP":
+      case "dd/MM/yyyyP":
       default:
         l = n.dateTime({ width: "full" });
         break;
@@ -45726,7 +45726,7 @@ function yY({ value: e, onChange: n, disabled: s }) {
             children: [
               t.jsx(Vn, { className: "mr-2 h-4 w-4" }),
               a
-                ? _t(a, "PPP p")
+                ? _t(a, "dd/MM/yyyy p")
                 : t.jsx("span", { children: "Pick a date and time" }),
             ],
           }),
@@ -46168,7 +46168,7 @@ const bY = iu({
                                             className:
                                               "mr-2 h-4 w-4 text-muted-foreground",
                                           }),
-                                          _t(new Date(Y.trainingDate), "PPP p"),
+                                          _t(new Date(Y.trainingDate), "dd/MM/yyyy p"),
                                         ],
                                       }),
                                     }),
@@ -47882,7 +47882,7 @@ function rR({ mode: e }) {
                                               "w-full pl-3 text-left font-normal",
                                             children: [
                                               T.value
-                                                ? _t(T.value, "PPP")
+                                                ? _t(T.value, "dd/MM/yyyy")
                                                 : "Pick a date",
                                               t.jsx(Vn, {
                                                 className:
@@ -48746,7 +48746,7 @@ const WY = ({
                             "Expires on ",
                             t.jsx("span", {
                               className: "font-medium",
-                              children: n ? _t(new Date(n), "PPP") : "N/A",
+                              children: n ? _t(new Date(n), "dd/MM/yyyy") : "N/A",
                             }),
                           ],
                         }),
@@ -49301,7 +49301,7 @@ function aR({ mode: e }) {
                                                 "w-full pl-3 text-left font-normal justify-start",
                                               children: [
                                                 E.value
-                                                  ? _t(E.value, "PPP")
+                                                  ? _t(E.value, "dd/MM/yyyy")
                                                   : t.jsx("span", {
                                                       children: "Pick a date",
                                                     }),
@@ -50519,7 +50519,7 @@ function rK({ mode: e }) {
                                                 "w-full pl-3 text-left font-normal justify-start",
                                               children: [
                                                 C.value
-                                                  ? _t(C.value, "PPP")
+                                                  ? _t(C.value, "dd/MM/yyyy")
                                                   : t.jsx("span", {
                                                       children: "Pick a date",
                                                     }),
@@ -52822,7 +52822,7 @@ function lR({ mode: e }) {
                                                 ),
                                                 children: [
                                                   G.value
-                                                    ? _t(G.value, "PPP")
+                                                    ? _t(G.value, "dd/MM/yyyy")
                                                     : t.jsx("span", {
                                                         children: "Select date",
                                                       }),
@@ -53229,7 +53229,7 @@ function lR({ mode: e }) {
                                               ),
                                               children: [
                                                 G.value
-                                                  ? _t(G.value, "PPP")
+                                                  ? _t(G.value, "dd/MM/yyyy")
                                                   : t.jsx("span", {
                                                       children: "Select date",
                                                     }),
@@ -53313,7 +53313,7 @@ function lR({ mode: e }) {
                                                     ),
                                                     children: [
                                                       G.value
-                                                        ? _t(G.value, "PPP")
+                                                        ? _t(G.value, "dd/MM/yyyy")
                                                         : t.jsx("span", {
                                                             children:
                                                               "Select date",
@@ -54028,7 +54028,7 @@ function cR({ mode: e }) {
                                   }`,
                                   children: [
                                     N.value
-                                      ? _t(N.value, "PPP")
+                                      ? _t(N.value, "dd/MM/yyyy")
                                       : t.jsx("span", {
                                           children: "Pick a date",
                                         }),
@@ -54679,7 +54679,7 @@ const vK = X.object({
                                               ),
                                               children: [
                                                 y.value
-                                                  ? _t(y.value, "PPP")
+                                                  ? _t(y.value, "dd/MM/yyyy")
                                                   : t.jsx("span", {
                                                       children: "Pick a date",
                                                     }),
@@ -55218,7 +55218,7 @@ const vK = X.object({
                               t.jsxs(gs, {
                                 children: [
                                   "Created on ",
-                                  _t(new Date(s.createdAt), "MMMM dd, yyyy"),
+                                  _t(new Date(s.createdAt), "Mdd/MM/yyyy"),
                                 ],
                               }),
                             ],
@@ -55292,7 +55292,7 @@ const vK = X.object({
                                           className: "font-medium",
                                           children: _t(
                                             new Date(s.date),
-                                            "MMMM dd, yyyy"
+                                            "Mdd/MM/yyyy"
                                           ),
                                         }),
                                       ],
@@ -55546,7 +55546,7 @@ const vK = X.object({
                           className: "text-sm text-gray-500",
                           children: [
                             "Last updated: ",
-                            _t(new Date(s.updatedAt), "MMMM dd, yyyy"),
+                            _t(new Date(s.updatedAt), "Mdd/MM/yyyy"),
                           ],
                         }),
                         t.jsxs("div", {
@@ -56222,7 +56222,7 @@ const vK = X.object({
       },
       k = (R) => {
         try {
-          return _t(new Date(R), "MMM dd, yyyy");
+          return _t(new Date(R), "dd/MM/yyyy");
         } catch {
           return "Invalid date";
         }
@@ -56653,7 +56653,7 @@ const vK = X.object({
       },
       k = (R) => {
         try {
-          return _t(new Date(R), "MMM dd, yyyy");
+          return _t(new Date(R), "dd/MM/yyyy");
         } catch {
           return "Invalid date";
         }
@@ -57015,7 +57015,7 @@ const vK = X.object({
       },
       K = (R) => {
         try {
-          return _t(new Date(R), "PPP");
+          return _t(new Date(R), "dd/MM/yyyy");
         } catch {
           return R;
         }
@@ -57388,7 +57388,7 @@ function uR({ mode: e }) {
                                               "w-full pl-3 text-left font-normal",
                                             children: [
                                               w.value
-                                                ? _t(w.value, "PPP")
+                                                ? _t(w.value, "dd/MM/yyyy")
                                                 : "Pick a date",
                                               t.jsx(Vn, {
                                                 className:
@@ -57601,7 +57601,7 @@ const MK = () =>
       z = (ee) => {
         if (!ee) return "N/A";
         try {
-          return _t(new Date(ee), "PPP");
+          return _t(new Date(ee), "dd/MM/yyyy");
         } catch {
           return ee;
         }
@@ -58238,7 +58238,7 @@ const MK = () =>
                                                 t.jsxs(_e, {
                                                   value: g.id.toString(),
                                                   children: [
-                                                    _t(new Date(g.date), "PPP"),
+                                                    _t(new Date(g.date), "dd/MM/yyyy"),
                                                     " -",
                                                     " ",
                                                     g.meetingTitle,
@@ -58631,7 +58631,7 @@ const MK = () =>
                                                             _.value
                                                               ? _t(
                                                                   _.value,
-                                                                  "PPP"
+                                                                  "dd/MM/yyyy"
                                                                 )
                                                               : t.jsx("span", {
                                                                   children:
@@ -59091,7 +59091,7 @@ const MK = () =>
       },
       Q = (R) => {
         try {
-          return _t(new Date(R), "PPP");
+          return _t(new Date(R), "dd/MM/yyyy");
         } catch {
           return R;
         }
@@ -60044,7 +60044,7 @@ const MK = () =>
       we = (J) => {
         if (!J) return "N/A";
         try {
-          return _t(new Date(J), "PPP");
+          return _t(new Date(J), "dd/MM/yyyy");
         } catch {
           return J;
         }
@@ -60737,7 +60737,7 @@ const QK = () => {
       },
       L = (H) => {
         try {
-          return _t(new Date(H), "MMM dd, yyyy");
+          return _t(new Date(H), "dd/MM/yyyy");
         } catch {
           return "Invalid date";
         }
