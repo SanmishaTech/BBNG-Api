@@ -12,7 +12,9 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
+const {roleGuard} = require("../middleware/authorize");
 const createUploadMiddleware = require("../middleware/uploadMiddleware");
+const { requireChapterRole } = require("../middleware/requireChapterRole");
 
 // Initialize upload middleware for member profile pictures
 const uploadMiddleware = createUploadMiddleware("members", [
@@ -268,7 +270,7 @@ router.get("/search", auth, memberController.searchMembers);
  *                 total:
  *                   type: integer
  */
-router.get("/", auth, memberController.getMembers);
+router.get("/", auth,  memberController.getMembers);
 
 /**
  * @swagger
@@ -390,7 +392,7 @@ router.get("/", auth, memberController.getMembers);
  *       415:
  *         description: Unsupported Media Type - Invalid file format
  */
-router.post("/", auth, uploadMiddleware, memberController.createMember);
+router.post("/", auth, roleGuard("admin"), uploadMiddleware, memberController.createMember);
 
 /**
  * @swagger
@@ -443,7 +445,7 @@ router.get("/:id", auth, memberController.getMemberById);
  *             schema:
  *               $ref: '#/components/schemas/Member'
  */
-router.put("/:id", auth, uploadMiddleware, memberController.updateMember);
+router.put("/:id", auth, roleGuard("admin"), uploadMiddleware, memberController.updateMember);
 
 /**
  * @swagger
@@ -463,7 +465,7 @@ router.put("/:id", auth, uploadMiddleware, memberController.updateMember);
  *       200:
  *         description: Member deleted successfully
  */
-router.delete("/:id", auth, memberController.deleteMember);
+router.delete("/:id", auth, roleGuard("admin"), memberController.deleteMember);
 
 /**
  * @swagger
@@ -510,6 +512,7 @@ router.delete("/:id", auth, memberController.deleteMember);
 router.post(
   "/:id/profile-pictures",
   auth,
+  roleGuard("admin"),
   uploadMiddleware,
   memberController.updateProfilePictures
 );

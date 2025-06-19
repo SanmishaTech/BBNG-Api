@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
+const { getUserAccessibleChapters } = require("../services/chapterService");
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -32,6 +33,10 @@ const asyncHandler = (fn) => (req, res, next) => {
           .json({ errors: { [field]: { type: "unique", message } } });
       }
     }
+    // HTTP errors thrown via http-errors (e.g., 403 Forbidden)
+    if (err.status && err.status >= 400 && err.status < 600) {
+      return res.status(err.status).json({ errors: { message: err.message } });
+    }
     // Fallback for unexpected errors
     console.error(err);
     return res
@@ -52,6 +57,11 @@ const getChapterMeetings = asyncHandler(async (req, res) => {
   const sortBy = req.query.sortBy || "date";
   const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
 
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
   const filters = [];
   if (search) {
     filters.push({
@@ -61,11 +71,32 @@ const getChapterMeetings = asyncHandler(async (req, res) => {
       ],
     });
   }
-  if (chapterId) {
-    filters.push({
-      chapterId: parseInt(chapterId),
-    });
+
+  // Chapter filtering logic
+  if (isAdmin) {
+    if (chapterId) {
+      filters.push({ chapterId: parseInt(chapterId) });
+    }
+  } else {
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+
+    if (accessibleChapterIds.length === 0) {
+      throw createError(403, "Forbidden: You do not have access to this resource.");
+    }
+
+    if (chapterId) {
+      const requestedChapterId = parseInt(chapterId);
+      if (accessibleChapterIds.includes(requestedChapterId)) {
+        filters.push({ chapterId: requestedChapterId });
+      } else {
+        throw createError(403, "Forbidden: You do not have access to this resource.");
+      }
+    } else {
+      filters.push({ chapterId: { in: accessibleChapterIds } });
+    }
   }
+
   const where = filters.length ? { AND: filters } : {};
 
   const [meetings, total] = await Promise.all([
@@ -155,6 +186,19 @@ const getChapterMeetingById = asyncHandler(async (req, res) => {
   });
   if (!meeting) throw createError(404, "Meeting not found");
 
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+    if (!accessibleChapterIds.includes(meeting.chapterId)) {
+      throw createError(403, "Forbidden: You do not have access to this chapter's meetings.");
+    }
+  }
+
   res.json(meeting);
 });
 
@@ -188,8 +232,17 @@ const updateChapterMeeting = asyncHandler(async (req, res) => {
     throw createError(404, "Meeting not found");
   }
   
-  if (meeting.chapterId !== chapterId) {
-    throw createError(403, "You can only update meetings for your own chapter");
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+    if (!accessibleChapterIds.includes(meeting.chapterId)) {
+        throw createError(403, "Forbidden: You do not have permission to update meetings for this chapter.");
+    }
   }
 
   const schema = z.object({
@@ -227,8 +280,21 @@ const deleteChapterMeeting = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (!id) throw createError(400, "Invalid meeting ID");
 
-  const existing = await prisma.chapterMeeting.findUnique({ where: { id } });
-  if (!existing) throw createError(404, "Meeting not found");
+  const meeting = await prisma.chapterMeeting.findUnique({ where: { id } });
+  if (!meeting) throw createError(404, "Meeting not found");
+
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+      const accessibleChapters = await getUserAccessibleChapters(user.id);
+      const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+      if (!accessibleChapterIds.includes(meeting.chapterId)) {
+          throw createError(403, "Forbidden: You do not have permission to delete meetings for this chapter.");
+      }
+  }
 
   await prisma.chapterMeeting.delete({ where: { id } });
   res.json({ message: "Meeting deleted successfully" });

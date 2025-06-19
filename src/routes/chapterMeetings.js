@@ -14,6 +14,7 @@ const router = express.Router();
 const chapterMeetingController = require("../controllers/chapterMeetingController");
 const auth = require("../middleware/auth");
 const acl = require("../middleware/acl");
+const { requireChapterRole } = require("../middleware/requireChapterRole");
 
 /**
  * @swagger
@@ -188,7 +189,7 @@ router.get("/:id", auth, chapterMeetingController.getChapterMeetingById);
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, chapterMeetingController.createChapterMeeting);
+router.post("/", auth, requireChapterRole('OB'), chapterMeetingController.createChapterMeeting);
 
 /**
  * @swagger

@@ -14,6 +14,7 @@ const router = express.Router();
 const chapterController = require("../controllers/chapterController");
 const auth = require("../middleware/auth");
 const acl = require("../middleware/acl");
+const { requireChapterRole } = require("../middleware/requireChapterRole");
 
 /**
  * @swagger
@@ -167,7 +168,7 @@ const acl = require("../middleware/acl");
  *                 totalChapters:
  *                   type: integer
  */
-router.get("/", auth, chapterController.getChapters);
+router.get("/", auth, requireChapterRole('OB'), chapterController.getChapters);
 
 /**
  * @swagger
@@ -196,7 +197,7 @@ router.get("/", auth, chapterController.getChapters);
  *       404:
  *         description: Chapter not found
  */
-router.get("/:id", auth, chapterController.getChapterById);
+router.get("/:id", auth, requireChapterRole('OB'), chapterController.getChapterById);
 
 /**
  * @swagger
@@ -272,7 +273,7 @@ router.get("/:id", auth, chapterController.getChapterById);
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, chapterController.createChapter);
+router.post("/", auth, requireChapterRole("OB"), chapterController.createChapter);
 
 /**
  * @swagger
@@ -350,7 +351,7 @@ router.post("/", auth, chapterController.createChapter);
  *       404:
  *         description: Chapter not found
  */
-router.put("/:id", auth, chapterController.updateChapter);
+router.put("/:id", auth, requireChapterRole("OB"), chapterController.updateChapter);
 
 /**
  * @swagger
@@ -380,25 +381,25 @@ router.put("/:id", auth, chapterController.updateChapter);
  *       404:
  *         description: Chapter not found
  */
-router.delete("/:id", auth, chapterController.deleteChapter);
+router.delete("/:id", auth, requireChapterRole("OB"), chapterController.deleteChapter);
 
 /**
  * Chapter Role Management Routes
  */
 
 // Get all roles for a chapter
-router.get("/:chapterId/roles", auth, chapterController.getChapterRoles);
+router.get("/:chapterId/roles", auth, requireChapterRole("OB"), chapterController.getChapterRoles);
 
 // Assign a role to a member
-router.post("/:chapterId/roles", auth, chapterController.assignChapterRole);
+router.post("/:chapterId/roles", auth, requireChapterRole("OB"), chapterController.assignChapterRole);
 
 // Remove a role assignment
-router.delete("/:chapterId/roles/:roleId", auth, chapterController.removeChapterRole);
+router.delete("/:chapterId/roles/:roleId", auth, requireChapterRole("OB"), chapterController.removeChapterRole);
 
 // Get role assignment history for a chapter
-router.get("/:chapterId/roles/history", auth, chapterController.getChapterRoleHistory);
+router.get("/:chapterId/roles/history", auth, requireChapterRole("OB"), chapterController.getChapterRoleHistory);
 
 // Get roles for a specific member (moved to chapter routes for consistency)
-router.get("/members/:memberId/roles", auth, chapterController.getMemberRoles);
+router.get("/members/:memberId/roles", auth, requireChapterRole("OB"), chapterController.getMemberRoles);
 
 module.exports = router;

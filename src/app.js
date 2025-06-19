@@ -36,6 +36,7 @@ const subCategoryRoutes = require("./routes/subCategory");
 const statisticsRoutes = require("./routes/statistics");
 const powerTeamRoutes = require("./routes/powerTeamRoutes");
 
+const responseWrapper = require("./middleware/responseWrapper");
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
 const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
@@ -43,6 +44,9 @@ const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
 const app = express();
 
 app.use(morgan("dev"));
+
+// Apply response wrapper middleware globally to normalise all responses
+app.use(responseWrapper);
 
 app.use(
   helmet({
@@ -96,35 +100,125 @@ console.log(`Serving uploads from: ${uploadsPath}`);
 app.use("/uploads", express.static(uploadsPath));
 
 app.use("/api/auth", authRoutes);
-app.use("/api/roles", authMiddleware, roleGuard("admin"), roleRoutes);
+app.use("/api/roles", authMiddleware, roleRoutes);
 app.use("/api/users", authMiddleware, roleGuard("admin"), userRoutes);
 app.use("/api/zones", authMiddleware, roleGuard("admin"), zoneRoutes);
 app.use("/api/locations", authMiddleware, roleGuard("admin"), locationRoutes);
 app.use("/api/trainings", authMiddleware, roleGuard("admin"), trainingRoutes);
 app.use("/api/states", authMiddleware, roleGuard("admin"), stateRoutes);
-app.use("/api/categories", authMiddleware, roleGuard("admin"), categoryRoutes);
+app.use(
+  "/api/categories",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  categoryRoutes
+);
 app.use("/api/sites", authMiddleware, roleGuard("admin"), siteRoutes);
 app.use("/api/messages", authMiddleware, roleGuard("admin"), messageRoutes);
-app.use("/api/chapters", authMiddleware, roleGuard("admin"), chapterRoutes);
-app.use("/api/chapter-meetings", authMiddleware, roleGuard("admin", "user"), chapterMeetingRoutes);
-app.use("/api/members", authMiddleware, roleGuard("admin"), memberRoutes);
+app.use(
+  "/api/chapters",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  chapterRoutes
+);
+app.use(
+  "/api/chapter-meetings",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  chapterMeetingRoutes
+);
+app.use(
+  "/api/members",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  memberRoutes
+);
 app.use("/api/packages", authMiddleware, roleGuard("admin"), packageRoutes);
-app.use("/api/memberships", authMiddleware, roleGuard("admin"), membershipRoutes);
-app.use("/api/visitors", authMiddleware, roleGuard("admin"), visitorRoutes);
-app.use("/api/meeting-attendance", authMiddleware, roleGuard("admin"), meetingAttendanceRoutes);
-app.use("/api/transactionRoutes", authMiddleware, roleGuard("admin"), transactionRoutes);
-app.use("/api/requirements", authMiddleware, roleGuard("admin", "user"), requirementRoutes);
-app.use("/api/statistics", authMiddleware, roleGuard("admin", "user"), statisticsRoutes);
+app.use(
+  "/api/memberships",
+  authMiddleware,
+  roleGuard("admin"),
+  membershipRoutes
+);
+app.use(
+  "/api/visitors",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  visitorRoutes
+);
+app.use(
+  "/api/meeting-attendance",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  meetingAttendanceRoutes
+);
+app.use(
+  "/api/transactionRoutes",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  transactionRoutes
+);
+app.use(
+  "/api/requirements",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  requirementRoutes
+);
+app.use("/api/statistics", authMiddleware, statisticsRoutes);
 
-app.use("/api/memberreports", authMiddleware, roleGuard("admin"), memberReportRoutes);
-app.use("/api/membershipreports", authMiddleware, roleGuard("admin"), membershipReportRoutes);
-app.use("/api/transactionreports", authMiddleware, roleGuard("admin"), transactionReportRoutes);
-app.use("/api/references", authMiddleware, roleGuard("admin", "user"), referenceRoutes);
-app.use("/api/one-to-ones", authMiddleware, roleGuard("admin", "user"), oneToOneRoutes);
-app.use("/api/thankyou-slips", authMiddleware, roleGuard("admin", "user"), thankYouSlipRoutes);
-app.use("/api/subcategories", authMiddleware, roleGuard("admin", "user"), subCategoryRoutes);
-app.use("/api/chapter-roles", authMiddleware, roleGuard("admin", "user"), chapterRoleRoutes);
-app.use("/api/powerteams", authMiddleware, roleGuard("admin", "user"), powerTeamRoutes);
+app.use(
+  "/api/memberreports",
+  authMiddleware,
+  roleGuard("admin"),
+  memberReportRoutes
+);
+app.use(
+  "/api/membershipreports",
+  authMiddleware,
+  roleGuard("admin"),
+  membershipReportRoutes
+);
+app.use(
+  "/api/transactionreports",
+  authMiddleware,
+  roleGuard("admin"),
+  transactionReportRoutes
+);
+app.use(
+  "/api/references",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  referenceRoutes
+);
+app.use(
+  "/api/one-to-ones",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  oneToOneRoutes
+);
+app.use(
+  "/api/thankyou-slips",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  thankYouSlipRoutes
+);
+app.use(
+  "/api/subcategories",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  subCategoryRoutes
+);
+app.use(
+  "/api/chapter-roles",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  chapterRoleRoutes
+);
+app.use(
+  "/api/powerteams",
+  authMiddleware,
+  roleGuard("admin", "user"),
+  powerTeamRoutes
+);
 app.use(swaggerRouter);
 
 app.get("*", (req, res, next) => {
