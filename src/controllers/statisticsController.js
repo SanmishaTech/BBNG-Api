@@ -577,6 +577,90 @@ const getUpcomingBirthdays = async (options = {}) => {
   }
 };
 
+/**
+ * Get recent transactions for a specific chapter
+ * @param {Object} options - Query options
+ * @param {number} options.chapterId - Chapter ID to get transactions for
+ * @returns {Promise<Object>} Recent transactions for the chapter
+ */
+const getChapterTransactions = async (options = {}) => {
+  try {
+    const { chapterId } = options;
+
+    if (!chapterId) {
+      throw new Error("Chapter ID is required");
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        chapterId: parseInt(chapterId),
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      take: 10, // Limit to 10 recent transactions
+    });
+
+    const formattedTransactions = transactions.map(t => ({
+      ...t,
+      memberName: t.partyName || 'N/A', // Use partyName from the transaction
+    }));
+
+    return {
+      transactions: formattedTransactions,
+      count: formattedTransactions.length,
+    };
+  } catch (error) {
+    console.error('Error in getChapterTransactions:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+/**
+ * Get bank and cash balances for a specific chapter
+ * @param {Object} options - Query options
+ * @param {number} options.chapterId - Chapter ID to get balances for
+ * @returns {Promise<Object>} Bank and cash balances for the chapter
+ */
+const getChapterBalances = async (options = {}) => {
+  try {
+    const { chapterId } = options;
+
+    if (!chapterId) {
+      throw new Error("Chapter ID is required");
+    }
+
+    const chapter = await prisma.chapter.findUnique({
+      where: {
+        id: parseInt(chapterId),
+      },
+      select: {
+        bankclosingbalance: true,
+        cashclosingbalance: true,
+      },
+    });
+
+    if (!chapter) {
+      return {
+        bankBalance: 0,
+        cashBalance: 0,
+      };
+    }
+
+    return {
+      bankBalance: parseFloat(chapter.bankclosingbalance) || 0,
+      cashBalance: parseFloat(chapter.cashclosingbalance) || 0,
+    };
+  } catch (error) {
+    console.error('Error in getChapterBalances:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
 module.exports = {
   getBusinessGenerated,
   getReferencesCount,
@@ -591,5 +675,7 @@ module.exports = {
   getRecentMessages,
   getRecentChapterMeetings,
   getTrainings,
-  getUpcomingBirthdays
+  getUpcomingBirthdays,
+  getChapterTransactions,
+  getChapterBalances
 };

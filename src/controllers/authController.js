@@ -8,165 +8,10 @@ const validateRequest = require("../utils/validateRequest");
 const config = require("../config/config");
 const jwtConfig = require("../config/jwt"); // Corrected: Get secret and expiresIn from here
 const createError = require("http-errors");
+const { getUserAccessibleChapters, getUserChapterRoles } = require("../services/chapterService");
 
 const POLICY_TEXT_KEY = "policy"; // Changed to 'policy' for consistency
 
-// Helper function to get user's chapter roles
-const getUserChapterRoles = async (userId) => {
-  try {
-    const member = await prisma.member.findUnique({
-      where: { userId },
-      include: {
-        chapterRoles: {
-          select: {
-            roleType: true,
-            chapterId: true,
-          },
-        },
-      },
-    });
-
-    if (member && member.chapterRoles) {
-      return member.chapterRoles.map(role => ({ 
-        role: role.roleType, 
-        chapterId: role.chapterId 
-      }));
-    }
-    return [];
-  } catch (error) {
-    console.error("Error fetching user chapter roles:", error);
-    // Depending on how you want to handle errors, you might throw it or return an empty array
-    return []; 
-  }
-};
-
-/**
- * Get chapters accessible by user based on their roles
- * Groups chapters by role categories:
- * - OB: Office Bearers (chapterHead, secretary, treasurer)
- * - RD: Regional Directors (connected to zones)
- * - DC: Development Coordinators (districtCoordinator, guardian)
- * 
- * @param {string} userId - User ID to check roles for
- * @returns {Promise<Array>} Array containing role categories and accessible chapter IDs
- */
-const getUserAccessibleChapters = async (userId) => {
-  try {
-    console.log(`Getting accessible chapters for user: ${userId}`);
-    
-    // Initialize result structure
-    const result = [
-      { role: 'OB', chapters: [] },
-      { role: 'RD', chapters: [] },
-      { role: 'DC', chapters: [] }
-    ];
-    
-    // Get the member associated with this user
-    const member = await prisma.member.findUnique({
-      where: { userId },
-      include: {
-        chapterRoles: {
-          select: {
-            roleType: true,
-            chapterId: true,
-          },
-        },
-        // Include the chapter to get zone information
-        chapter: {
-          select: {
-            id: true,
-            zoneId: true
-          }
-        }
-      },
-    });
-
-    if (!member) {
-      console.log(`No member found for user: ${userId}`);
-      return result;
-    }
-    
-    console.log(`Found member with ${member.chapterRoles.length} chapter roles`);
-
-    // Process OB roles (office bearers)
-    const obRoles = ['chapterHead', 'secretary', 'treasurer'];
-    const obChapters = member.chapterRoles
-      .filter(role => obRoles.includes(role.roleType))
-      .map(role => role.chapterId);
-    
-    // Remove duplicates
-    result[0].chapters = [...new Set(obChapters)];
-    console.log(`OB chapters: ${result[0].chapters.join(', ')}`);
-
-    // Process DC roles (development coordinators)
-    // Checking for 'districtCoordinator' and 'guardian' as well as the possible 'developmentCoordinator' role
-    const dcRoles = ['districtCoordinator', 'guardian', 'developmentCoordinator'];
-    const dcChapters = member.chapterRoles
-      .filter(role => dcRoles.includes(role.roleType))
-      .map(role => role.chapterId);
-    
-    // Remove duplicates
-    result[2].chapters = [...new Set(dcChapters)];
-    console.log(`DC chapters: ${result[2].chapters.join(', ')}`);
-
-    // Now handle RD roles by checking for zone roles in a separate query
-    // This avoids issues if the zoneRoles relation is not properly defined
-    try {
-      console.log(`[RD DEBUG] Processing RD roles for userId: ${userId}`);
-      const zoneRoles = await prisma.zoneRole.findMany({
-        where: {
-          member: {
-            userId: userId
-          }
-        },
-        select: {
-          roleType: true,
-          zoneId: true
-        }
-      });
-      
-      if (zoneRoles && zoneRoles.length > 0) {
-        console.log(`Found ${zoneRoles.length} zone roles`);
-        const rdRoles = ['Regional Director', 'Joint Secretary']; // Match database casing
-        const zoneIds = zoneRoles
-          .filter(role => rdRoles.includes(role.roleType))
-          .map(role => role.zoneId);
-        
-        // If user has zone roles, get all chapters in those zones
-        if (zoneIds.length > 0) {
-          const chaptersInZones = await prisma.chapter.findMany({
-            where: {
-              zoneId: {
-                in: zoneIds
-              }
-            },
-            select: {
-              id: true
-            }
-          });
-          
-          result[1].chapters = chaptersInZones.map(chapter => chapter.id);
-          console.log(`RD chapters: ${result[1].chapters.join(', ')}`);
-        }
-      } else {
-        console.log('No zone roles found');
-      }
-    } catch (zoneError) {
-      console.error('Error fetching zone roles:', zoneError);
-      // We'll continue without zone roles if there was an error
-    }
-
-    console.log('[DEBUG getUserAccessibleChapters] Returning result:', JSON.stringify(result, null, 2));
-    return result;
-  } catch (error) {
-    console.error('Error getting user accessible chapters:', error);
-    return [
-      { role: 'OB', chapters: [] },
-      { role: 'RD', chapters: [] },
-      { role: 'DC', chapters: [] }
-    ];
-  }
-};
 
 // Register a new user
 const register = async (req, res, next) => {
@@ -368,11 +213,17 @@ const login = async (req, res, next) => {
 
     const { password: _, resetToken: __, resetTokenExpires: ___, ...userWithoutSensitiveData } = user;
 
+    console.log("[LOGIN_TRACE] Fetching user roles and accessible chapters...");
+    const roles = await getUserChapterRoles(user.id);
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    console.log("[LOGIN_TRACE] Fetched roles and chapters.");
     console.log("[LOGIN_TRACE] Preparing to send response...");
     res.json({
       message: "Login successful",
       token,
       user: userWithoutSensitiveData,
+      roles,
+      accessibleChapters,
       requiresPolicyAcceptance,
       memberDetails: user.member,
     });
@@ -511,20 +362,7 @@ const acceptPolicy = async (req, res, next) => {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        policyAccepted: true,
-        policyAcceptedAt: new Date(),
-        policyAcceptedVersion: currentPolicyVersion, // Store the version of the policy they accepted
-      },
-      select: { // Select only the fields safe to return
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        active: true,
-        lastLogin: true,
-        policyAccepted: true,
-        policyAcceptedAt: true,
-        policyAcceptedVersion: true,
+        policyAcceptedVersion: currentPolicyVersion,
       },
     });
 
@@ -543,8 +381,6 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
-  getUserAccessibleChapters,
-  getUserChapterRoles,
   getPolicyText,
   acceptPolicy,
 };

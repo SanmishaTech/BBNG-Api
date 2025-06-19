@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
+const { getUserAccessibleChapters } = require("../services/chapterService");
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -52,6 +53,11 @@ const getVisitors = asyncHandler(async (req, res) => {
   const sortBy = req.query.sortBy || "createdAt";
   const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
 
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
   const filters = [];
   if (search) {
     filters.push({
@@ -63,55 +69,57 @@ const getVisitors = asyncHandler(async (req, res) => {
       ],
     });
   }
-  if (meetingId) {
-    filters.push({
-      meetingId: parseInt(meetingId),
-    });
-  } else if (chapterId) {
-    // If no meetingId but chapterId is provided, filter by chapter
-    filters.push({
-      chapterId: parseInt(chapterId),
-    });
-  }
-  
-  // Date range filter if provided
+
+  // Date range filter
   if (fromDate && toDate) {
-    filters.push({
-      meeting: {
-        date: {
-          gte: new Date(fromDate),
-          lte: new Date(toDate)
-        }
-      }
-    });
+    filters.push({ meeting: { date: { gte: new Date(fromDate), lte: new Date(toDate) } } });
   } else if (fromDate) {
-    filters.push({
-      meeting: {
-        date: {
-          gte: new Date(fromDate)
-        }
-      }
-    });
+    filters.push({ meeting: { date: { gte: new Date(fromDate) } } });
   } else if (toDate) {
-    filters.push({
-      meeting: {
-        date: {
-          lte: new Date(toDate)
-        }
-      }
-    });
+    filters.push({ meeting: { date: { lte: new Date(toDate) } } });
   }
   
   if (status) {
+    filters.push({ status });
+  }
+
+  // Chapter and Meeting filtering logic
+  if (isAdmin) {
+    if (meetingId) {
+      filters.push({ meetingId: parseInt(meetingId) });
+    } else if (chapterId) {
+      filters.push({ chapterId: parseInt(chapterId) });
+    }
+  } else {
+    const accessibleChapters = await getUserAccessibleChapters(user.id);
+    const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+
+    if (accessibleChapterIds.length === 0) {
+      return res.json({ visitors: [], page, totalPages: 0, totalVisitors: 0 });
+    }
+
+    // Include visitors whose own chapterId or their meeting's chapterId is within the user's accessible chapters
     filters.push({
-      status,
+      OR: [
+        { chapterId: { in: accessibleChapterIds } },
+        { meeting: { is: { chapterId: { in: accessibleChapterIds } } } },
+      ],
     });
+
+    if (meetingId) {
+        filters.push({ meetingId: parseInt(meetingId) });
+    } else if (chapterId) {
+        // Allow filtering by either visitor's chapter or meeting's chapter
+        const chapIdInt = parseInt(chapterId);
+        filters.push({
+          OR: [
+            { chapterId: chapIdInt },
+            { meeting: { is: { chapterId: chapIdInt } } },
+          ],
+        });
+    }
   }
-  
-  // Require either meetingId or chapterId
-  if (!meetingId && !chapterId) {
-    throw createError(400, "Either Meeting ID or Chapter ID is required");
-  }
+
   const where = filters.length ? { AND: filters } : {};
 
   const [visitors, total] = await Promise.all([
@@ -346,6 +354,24 @@ const getVisitorById = asyncHandler(async (req, res) => {
   });
   if (!visitor) throw createError(404, "Visitor not found");
 
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+      const accessibleChapters = await getUserAccessibleChapters(user.id);
+      const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+      const hasAccess = (
+        visitor.chapterId && accessibleChapterIds.includes(visitor.chapterId)
+      ) || (
+        visitor.meeting?.chapterId && accessibleChapterIds.includes(visitor.meeting.chapterId)
+      );
+      if (!hasAccess) {
+          throw createError(403, "Forbidden: You do not have access to this visitor's chapter.");
+      }
+  }
+
   res.json(visitor);
 });
 
@@ -523,6 +549,19 @@ const updateVisitor = asyncHandler(async (req, res) => {
   const existing = await prisma.visitor.findUnique({ where: { id } });
   if (!existing) throw createError(404, "Visitor not found");
 
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+      const accessibleChapters = await getUserAccessibleChapters(user.id);
+      const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+      if (!existing.chapterId || !accessibleChapterIds.includes(existing.chapterId)) {
+          throw createError(403, "Forbidden: You do not have permission to update visitors for this chapter.");
+      }
+  }
+
   // Handle dateOfBirth properly when it's included in the update
   const updateData = { ...req.body };
   if (updateData.dateOfBirth) {
@@ -556,6 +595,19 @@ const deleteVisitor = asyncHandler(async (req, res) => {
 
   const existing = await prisma.visitor.findUnique({ where: { id } });
   if (!existing) throw createError(404, "Visitor not found");
+
+  const user = req.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles.map(r => r.toLowerCase()) : [String(user.role || "").toLowerCase()];
+  const adminRoles = ["admin", "super_admin"];
+  const isAdmin = userRoles.some(role => adminRoles.includes(role));
+
+  if (!isAdmin) {
+      const accessibleChapters = await getUserAccessibleChapters(user.id);
+      const accessibleChapterIds = accessibleChapters.flatMap(group => group.chapters);
+      if (!existing.chapterId || !accessibleChapterIds.includes(existing.chapterId)) {
+          throw createError(403, "Forbidden: You do not have permission to delete visitors for this chapter.");
+      }
+  }
 
   await prisma.visitor.delete({ where: { id } });
   res.json({ message: "Visitor deleted successfully" });

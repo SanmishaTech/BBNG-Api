@@ -1,13 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const statisticsController = require("../controllers/statisticsController");
+const authMiddleware = require("../middleware/auth");
 
 /**
  * @route GET /api/statistics/business-generated
  * @desc Get BBNG business generated statistics
  * @access Private
  */
-router.get("/business-generated", async (req, res) => {
+router.get("/business-generated", authMiddleware, async (req, res) => {
   try {
     const businessStats = await statisticsController.getBusinessGenerated();
     res.json(businessStats);
@@ -35,7 +36,7 @@ router.get("/references-count", async (req, res) => {
  * @desc Get total visitors statistics
  * @access Private
  */
-router.get("/total-visitors", async (req, res) => {
+router.get("/total-visitors", authMiddleware, async (req, res) => {
   try {
     const totalVisitorsStats = await statisticsController.getTotalVisitors();
     res.json(totalVisitorsStats);
@@ -278,4 +279,34 @@ router.get("/member-received-references/:memberId", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+/**
+ * @route GET /api/statistics/chapter-transactions/:chapterId
+ * @desc Get recent transactions for a specific chapter
+ * @access Private
+ */
+router.get("/chapter-transactions/:chapterId", async (req, res) => {
+  try {
+    const chapterId = req.params.chapterId;
+    const chapterTransactions = await statisticsController.getChapterTransactions({ chapterId });
+    res.json(chapterTransactions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @route GET /api/statistics/chapter-balances/:chapterId
+ * @desc Get bank and cash balances for a specific chapter
+ * @access Private
+ */
+router.get("/chapter-balances/:chapterId", async (req, res) => {
+  try {
+    const chapterId = req.params.chapterId;
+    const chapterBalances = await statisticsController.getChapterBalances({ chapterId });
+    res.json(chapterBalances);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
