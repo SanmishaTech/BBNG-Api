@@ -32,7 +32,7 @@ const acl = require("../middleware/acl");
 
 /**
  * @swagger
- * /trainings:
+ * /api/trainings:
  *   get:
  *     summary: List all trainings
  *     tags: [Trainings]
@@ -87,7 +87,7 @@ router.get("/", auth, trainingController.getTrainings);
 
 /**
  * @swagger
- * /trainings/{id}:
+ * /api/trainings/{id}:
  *   get:
  *     summary: Get training by ID
  *     tags: [Trainings]
@@ -111,7 +111,7 @@ router.get("/:id", auth, trainingController.getTrainingById);
 
 /**
  * @swagger
- * /trainings:
+ * /api/trainings:
  *   post:
  *     summary: Schedule a new training
  *     tags: [Trainings]
@@ -145,7 +145,7 @@ router.post("/", auth,  trainingController.createTraining);
 
 /**
  * @swagger
- * /trainings/{id}:
+ * /api/trainings/{id}:
  *   put:
  *     summary: Update a training schedule
  *     tags: [Trainings]
@@ -182,7 +182,7 @@ router.put("/:id", auth,  trainingController.updateTraining);
 
 /**
  * @swagger
- * /trainings/{id}:
+ * /api/trainings/{id}:
  *   delete:
  *     summary: Cancel a training
  *     tags: [Trainings]

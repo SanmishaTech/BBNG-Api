@@ -62,7 +62,7 @@ const auth = require("../middleware/auth"); // Assuming you have standard auth m
 
 /**
  * @swagger
- * /powerteams:
+ * /api/powerteams:
  *   get:
  *     summary: List all power teams
  *     tags: [PowerTeams]
@@ -106,7 +106,7 @@ router.get("/", auth, /* acl.can('read', 'powerteam'), */ powerTeamController.ge
 
 /**
  * @swagger
- * /powerteams/{id}:
+ * /api/powerteams/{id}:
  *   get:
  *     summary: Get power team by ID
  *     tags: [PowerTeams]
@@ -130,7 +130,7 @@ router.get("/:id", auth, /* acl.can('read', 'powerteam'), */ powerTeamController
 
 /**
  * @swagger
- * /powerteams:
+ * /api/powerteams:
  *   post:
  *     summary: Create a new power team
  *     tags: [PowerTeams]
@@ -155,7 +155,7 @@ router.post("/", auth, /* acl.can('create', 'powerteam'), */ powerTeamController
 
 /**
  * @swagger
- * /powerteams/{id}:
+ * /api/powerteams/{id}:
  *   put:
  *     summary: Update a power team
  *     tags: [PowerTeams]
@@ -193,7 +193,7 @@ router.put("/:id", auth, /* acl.can('update', 'powerteam'), */ powerTeamControll
 
 /**
  * @swagger
- * /powerteams/{id}:
+ * /api/powerteams/{id}:
  *   delete:
  *     summary: Delete a power team
  *     tags: [PowerTeams]

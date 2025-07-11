@@ -235,6 +235,10 @@ const createMembership = asyncHandler(async (req, res) => {
         (v) => new Date(v),
         z.date({ required_error: "Invoice date is required" })
       ),
+      packageStartDate: z.preprocess(
+        (v) => (v ? new Date(v) : null),
+        z.date({ required_error: "Package start date is required" })
+      ),
       packageId: z.number().int().positive("Package ID is required"),
       basicFees: z.number().positive("Basic fees must be positive"),
       cgstRate: z.number().min(0, "CGST rate cannot be negative").optional().nullable(),
@@ -245,6 +249,14 @@ const createMembership = asyncHandler(async (req, res) => {
         z.date().optional().nullable()
       ),
       paymentMode: z.string().optional().nullable(),
+      chequeNumber: z.string().optional().nullable(),
+      chequeDate: z.preprocess(
+        (v) => (v ? new Date(v) : null),
+        z.date().optional().nullable()
+      ),
+      bankName: z.string().optional().nullable(),
+      neftNumber: z.string().optional().nullable(),
+      utrNumber: z.string().optional().nullable(),
     })
     .superRefine(async (data, ctx) => {
       // Check if member exists
@@ -290,19 +302,27 @@ const createMembership = asyncHandler(async (req, res) => {
   // Generate unique invoice number based on financial year
   const invoiceNumber = await generateInvoiceNumber(new Date(req.body.invoiceDate));
 
-  // Determine package start and end dates
-  let packageStartDate = new Date();
+  // Use the packageStartDate from the request if provided, otherwise fall back to calculated date
+  let packageStartDate;
   let packageEndDate;
 
-  if (packageData.isVenueFee) {
-    // For venue fee packages, use venueExpiryDate
-    if (member.venueExpiryDate && new Date(member.venueExpiryDate) > new Date()) {
-      packageStartDate = new Date(member.venueExpiryDate);
-    }
+  if (req.body.packageStartDate) {
+    // Use the explicitly provided start date from frontend
+    packageStartDate = new Date(req.body.packageStartDate);
   } else {
-    // For non-venue fee packages, use hoExpiryDate
-    if (member.hoExpiryDate && new Date(member.hoExpiryDate) > new Date()) {
-      packageStartDate = new Date(member.hoExpiryDate);
+    // Fall back to the original logic if no start date is provided
+    packageStartDate = new Date();
+    
+    if (packageData.isVenueFee) {
+      // For venue fee packages, use venueExpiryDate
+      if (member.venueExpiryDate && new Date(member.venueExpiryDate) > new Date()) {
+        packageStartDate = new Date(member.venueExpiryDate);
+      }
+    } else {
+      // For non-venue fee packages, use hoExpiryDate
+      if (member.hoExpiryDate && new Date(member.hoExpiryDate) > new Date()) {
+        packageStartDate = new Date(member.hoExpiryDate);
+      }
     }
   }
 

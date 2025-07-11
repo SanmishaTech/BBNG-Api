@@ -14648,7 +14648,7 @@ function et(e, n) {
   return { ...o, mutate: l, mutateAsync: o.mutate };
 }
 const Km = "BBNG",
-  xO = () => "http://15.207.30.113//",
+  xO = () => "http://localhost:3000//",
   Wy = xO();
 var rd = {},
   _N;
@@ -27603,7 +27603,7 @@ const zM = {
     typeof WorkerGlobalScope < "u" &&
     self instanceof WorkerGlobalScope &&
     typeof self.importScripts == "function",
-  V9 = (Gb && window.location.href) || "http://15.207.30.113/",
+  V9 = (Gb && window.location.href) || "http://localhost:3000/",
   H9 = Object.freeze(
     Object.defineProperty(
       {
@@ -48867,7 +48867,7 @@ const WY = ({
           })
       : n;
   },
-  JY = "http://15.207.30.113/";
+  JY = "http://localhost:3000/";
 function aR({ mode: e }) {
   const { id: n } = us(),
     s = St(),
@@ -50112,7 +50112,7 @@ const eK = () =>
           })
       : n;
   },
-  sK = "http://15.207.30.113/";
+  sK = "http://localhost:3000/";
 function rK({ mode: e }) {
   var S;
   const n =

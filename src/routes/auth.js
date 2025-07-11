@@ -13,7 +13,7 @@ const auth = require('../middleware/auth'); // Assuming middleware path and name
 
 /**
  * @swagger
- * /auth/register:
+ * /api/auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Auth]
@@ -45,7 +45,7 @@ router.post("/register", authController.register);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Login a user
  *     tags: [Auth]
@@ -99,7 +99,7 @@ router.post("/login", authController.login);
 
 /**
  * @swagger
- * /auth/forgot-password:
+ * /api/auth/forgot-password:
  *   post:
  *     summary: Request a password reset link
  *     tags: [Auth]
@@ -125,7 +125,7 @@ router.post("/forgot-password", authController.forgotPassword);
 
 /**
  * @swagger
- * /auth/reset-password/{token}:
+ * /api/auth/reset-password/{token}:
  *   post:
  *     summary: Reset the password using the reset token
  *     tags: [Auth]
@@ -156,7 +156,7 @@ router.post("/reset-password/:token", authController.resetPassword);
 
 /**
  * @swagger
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
  *     summary: Logout a user
  *     tags: [Auth]
@@ -166,7 +166,7 @@ router.post("/reset-password/:token", authController.resetPassword);
  */
 /**
  * @swagger
- * /auth/policy-text:
+ * /api/auth/policy-text:
  *   get:
  *     summary: Get the site policy text
  *     tags: [Auth]
@@ -190,7 +190,7 @@ router.get("/policy-text", authController.getPolicyText);
 
 /**
  * @swagger
- * /auth/accept-policy:
+ * /api/auth/accept-policy:
  *   patch:
  *     summary: Accept the site policy
  *     tags: [Auth]

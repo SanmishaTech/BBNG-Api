@@ -8,13 +8,18 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Node-Star API",
+      title: "BBNG API",
       version: "1.0.0",
-      description: "A simple Node.js REST API.",
+      description: "Business Builders Networking Group (BBNG) REST API for managing memberships, members, chapters, meetings, and more.",
+      contact: {
+        name: "BBNG Development Team",
+        email: "support@bbng.com"
+      }
     },
     servers: [
       {
-        url: "http://15.207.30.113/",
+        url: "http://localhost:3000/",
+        description: "Development server"
       },
     ],
     components: {

@@ -106,7 +106,7 @@ const { requireChapterRole } = require("../middleware/requireChapterRole");
 
 /**
  * @swagger
- * /chapters:
+ * /api/chapters:
  *   get:
  *     summary: List all chapters
  *     tags: [Chapters]
@@ -172,7 +172,7 @@ router.get("/", auth, requireChapterRole('OB'), chapterController.getChapters);
 
 /**
  * @swagger
- * /chapters/{id}:
+ * /api/chapters/{id}:
  *   get:
  *     summary: Get chapter by ID
  *     tags: [Chapters]
@@ -201,7 +201,7 @@ router.get("/:id", auth, requireChapterRole('OB'), chapterController.getChapterB
 
 /**
  * @swagger
- * /chapters:
+ * /api/chapters:
  *   post:
  *     summary: Create a new chapter
  *     tags: [Chapters]
@@ -277,7 +277,7 @@ router.post("/", auth, requireChapterRole("OB"), chapterController.createChapter
 
 /**
  * @swagger
- * /chapters/{id}:
+ * /api/chapters/{id}:
  *   put:
  *     summary: Update a chapter
  *     tags: [Chapters]
@@ -355,7 +355,7 @@ router.put("/:id", auth, requireChapterRole("OB"), chapterController.updateChapt
 
 /**
  * @swagger
- * /chapters/{id}:
+ * /api/chapters/{id}:
  *   delete:
  *     summary: Delete a chapter
  *     tags: [Chapters]
