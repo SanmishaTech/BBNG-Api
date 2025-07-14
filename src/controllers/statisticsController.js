@@ -484,7 +484,7 @@ const getTrainings = async (options = {}) => {
     
     const trainings = await prisma.training.findMany({
       orderBy: {
-        trainingDate: 'asc'
+        date: 'asc'
       },
       take: parseInt(limit)
     });

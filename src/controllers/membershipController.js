@@ -75,8 +75,8 @@ const getFinancialYearCode = (date = new Date()) => {
 /**
  * Calculate the financial year end date based on a given date
  * Financial year in India ends on March 31st
- * If the given date is past March, return next year's March 30th
- * If the given date is before or in March, return current year's March 30th
+ * If the given date is past March, return next year's March 31st
+ * If the given date is before or in March, return current year's March 31st
  */
 const getFinancialYearEndDate = (date = new Date()) => {
   const currentMonth = date.getMonth(); // 0-11 (0 = January, 2 = March)
@@ -92,11 +92,11 @@ const getFinancialYearEndDate = (date = new Date()) => {
     expiryYear = currentYear;
   }
   
-  // Create a new date set to March 30th of the target year
+  // Create a new date set to March 31st of the target year
   const expiryDate = new Date(date);
   expiryDate.setFullYear(expiryYear);
   expiryDate.setMonth(2); // March (0-indexed)
-  expiryDate.setDate(30); // 30th day
+  expiryDate.setDate(31); // 31st day
   
   return expiryDate;
 };
@@ -235,6 +235,10 @@ const createMembership = asyncHandler(async (req, res) => {
         (v) => new Date(v),
         z.date({ required_error: "Invoice date is required" })
       ),
+      packageStartDate: z.preprocess(
+        (v) => (v ? new Date(v) : null),
+        z.date({ required_error: "Package start date is required" })
+      ),
       packageId: z.number().int().positive("Package ID is required"),
       basicFees: z.number().positive("Basic fees must be positive"),
       cgstRate: z.number().min(0, "CGST rate cannot be negative").optional().nullable(),
@@ -245,6 +249,14 @@ const createMembership = asyncHandler(async (req, res) => {
         z.date().optional().nullable()
       ),
       paymentMode: z.string().optional().nullable(),
+      chequeNumber: z.string().optional().nullable(),
+      chequeDate: z.preprocess(
+        (v) => (v ? new Date(v) : null),
+        z.date().optional().nullable()
+      ),
+      bankName: z.string().optional().nullable(),
+      neftNumber: z.string().optional().nullable(),
+      utrNumber: z.string().optional().nullable(),
     })
     .superRefine(async (data, ctx) => {
       // Check if member exists
@@ -290,25 +302,42 @@ const createMembership = asyncHandler(async (req, res) => {
   // Generate unique invoice number based on financial year
   const invoiceNumber = await generateInvoiceNumber(new Date(req.body.invoiceDate));
 
-  // Determine package start and end dates
-  let packageStartDate = new Date();
+  // Use the packageStartDate from the request if provided, otherwise fall back to calculated date
+  let packageStartDate;
   let packageEndDate;
 
-  if (packageData.isVenueFee) {
-    // For venue fee packages, use venueExpiryDate
-    if (member.venueExpiryDate && new Date(member.venueExpiryDate) > new Date()) {
-      packageStartDate = new Date(member.venueExpiryDate);
-    }
+  if (req.body.packageStartDate) {
+    // Use the explicitly provided start date from frontend
+    packageStartDate = new Date(req.body.packageStartDate);
   } else {
-    // For non-venue fee packages, use hoExpiryDate
-    if (member.hoExpiryDate && new Date(member.hoExpiryDate) > new Date()) {
-      packageStartDate = new Date(member.hoExpiryDate);
+    // Fall back to the original logic if no start date is provided
+    packageStartDate = new Date();
+    
+    if (packageData.isVenueFee) {
+      // For venue fee packages, use venueExpiryDate
+      if (member.venueExpiryDate && new Date(member.venueExpiryDate) > new Date()) {
+        packageStartDate = new Date(member.venueExpiryDate);
+      }
+    } else {
+      // For non-venue fee packages, use hoExpiryDate
+      if (member.hoExpiryDate && new Date(member.hoExpiryDate) > new Date()) {
+        packageStartDate = new Date(member.hoExpiryDate);
+      }
     }
   }
 
-  // Calculate the package end date using financial year logic
-  // Regardless of package duration, we set expiry to March 30th of appropriate financial year
-  packageEndDate = getFinancialYearEndDate(packageStartDate);
+  // Calculate the package end date based on package duration
+  // First, calculate the natural expiry date
+  const naturalExpiryDate = new Date(packageStartDate);
+  naturalExpiryDate.setMonth(naturalExpiryDate.getMonth() + packageData.periodMonths);
+  naturalExpiryDate.setDate(naturalExpiryDate.getDate() - 1); // Make it inclusive
+  
+  // Get the financial year end date (March 31st)
+  const financialYearEnd = getFinancialYearEndDate(packageStartDate);
+  
+  // If natural expiry is after March 31st, cap it at March 31st
+  // Otherwise, let it expire naturally
+  packageEndDate = naturalExpiryDate > financialYearEnd ? financialYearEnd : naturalExpiryDate;
 
   // Calculate GST amounts and total fees
   const basicFees = parseFloat(req.body.basicFees);

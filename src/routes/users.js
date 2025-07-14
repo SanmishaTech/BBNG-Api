@@ -24,7 +24,7 @@ const acl = require("../middleware/acl");
 
 /**
  * @swagger
- * /users:
+ * /api/users:
  *   get:
  *     summary: Get all users
  *     tags: [Users]
@@ -114,7 +114,7 @@ router.get("/", auth, userController.getUsers);
 
 /**
  * @swagger
- * /users:
+ * /api/users:
  *   post:
  *     summary: Create a new user
  *     tags: [Users]
@@ -149,7 +149,7 @@ router.post("/", auth, userController.createUser);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   get:
  *     summary: Get user by ID
  *     tags: [Users]
@@ -176,7 +176,7 @@ router.get("/:id", auth, userController.getUserById);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   put:
  *     summary: Update user by ID
  *     tags: [Users]
@@ -220,7 +220,7 @@ router.put("/:id", auth, userController.updateUser);
 
 /**
  * @swagger
- * /users/{id}:
+ * /api/users/{id}:
  *   delete:
  *     summary: Delete user by ID
  *     tags: [Users]
@@ -247,7 +247,7 @@ router.delete("/:id", auth, userController.deleteUser);
 
 /**
  * @swagger
- * /users/{id}/status:
+ * /api/users/{id}/status:
  *   patch:
  *     summary: Set user active status
  *     tags: [Users]
@@ -285,7 +285,7 @@ router.patch("/:id/status", auth, userController.setActiveStatus);
 
 /**
  * @swagger
- * /users/{id}/password:
+ * /api/users/{id}/password:
  *   patch:
  *     summary: Change user password
  *     tags: [Users]

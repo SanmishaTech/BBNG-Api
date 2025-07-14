@@ -126,7 +126,7 @@ const handleUploadErrors = (err, req, res, next) => {
 
 /**
  * @swagger
- * /messages:
+ * /api/messages:
  *   get:
  *     summary: List all messages
  *     tags: [Messages]
@@ -186,7 +186,7 @@ router.get("/", auth, messageController.getMessages);
 
 /**
  * @swagger
- * /messages/{id}:
+ * /api/messages/{id}:
  *   get:
  *     summary: Get message by ID
  *     tags: [Messages]
@@ -210,7 +210,7 @@ router.get("/:id", auth, messageController.getMessageById);
 
 /**
  * @swagger
- * /messages:
+ * /api/messages:
  *   post:
  *     summary: Create a new message
  *     tags: [Messages]
@@ -250,7 +250,7 @@ router.post("/", auth, upload.single('attachment'), handleUploadErrors, messageC
 
 /**
  * @swagger
- * /messages/{id}:
+ * /api/messages/{id}:
  *   put:
  *     summary: Update a message
  *     tags: [Messages]
@@ -296,7 +296,7 @@ router.put("/:id", auth, upload.single('attachment'), handleUploadErrors, messag
 
 /**
  * @swagger
- * /messages/{id}:
+ * /api/messages/{id}:
  *   delete:
  *     summary: Delete a message
  *     tags: [Messages]
@@ -323,7 +323,7 @@ router.delete("/:id", auth, messageController.deleteMessage);
 
 /**
  * @swagger
- * /messages/{id}/attachment:
+ * /api/messages/{id}/attachment:
  *   get:
  *     summary: Download message attachment
  *     tags: [Messages]

@@ -69,7 +69,7 @@ const acl = require("../middleware/acl");
 
 /**
  * @swagger
- * /zones:
+ * /api/zones:
  *   get:
  *     summary: Retrieve a list of zones
  *     tags: [Zones]
@@ -160,7 +160,7 @@ router.post("/", auth, zoneController.createZone);
 
 /**
  * @swagger
- * /zones/{id}:
+ * /api/zones/{id}:
  *   get:
  *     summary: Get a zone by its ID
  *     tags: [Zones]
@@ -263,7 +263,7 @@ router.delete("/:id", auth, zoneController.deleteZone);
 
 /**
  * @swagger
- * /zones/{zoneId}/chapters:
+ * /api/zones/{zoneId}/chapters:
  *   get:
  *     summary: Retrieve chapters for a specific zone
  *     tags: [Zones]
@@ -317,7 +317,7 @@ router.get(
 
 /**
  * @swagger
- * /zones/{zoneId}/roles:
+ * /api/zones/{zoneId}/roles:
  *   get:
  *     summary: Get all roles for a specific zone
  *     tags: [Zones]
@@ -342,7 +342,7 @@ router.get("/:zoneId/roles", auth, zoneController.getZoneRoles);
 
 /**
  * @swagger
- * /zones/{zoneId}/roles:
+ * /api/zones/{zoneId}/roles:
  *   post:
  *     summary: Assign a role to a member in a zone
  *     tags: [Zones]
@@ -384,7 +384,7 @@ router.post("/:zoneId/roles", auth, zoneController.assignZoneRole);
 
 /**
  * @swagger
- * /zones/roles/{assignmentId}:
+ * /api/zones/roles/{assignmentId}:
  *   delete:
  *     summary: Remove a zone role assignment
  *     tags: [Zones]

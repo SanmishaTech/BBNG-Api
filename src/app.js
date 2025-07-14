@@ -57,20 +57,9 @@ app.use(
   })
 );
 
-const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-const allowedOrigins = allowedOriginsEnv
-  ? allowedOriginsEnv.split(",")
-  : ["http://localhost:5173", "http://15.207.30.113"];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true, // Allow all origins
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -80,13 +69,17 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const frontendDistPath =
-  process.env.NODE_ENV === "production"
-    ? process.env.FRONTEND_PATH ||
-      path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
-    : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
+// const frontendDistPath =
+//   process.env.NODE_ENV === "production"
+//     ? process.env.FRONTEND_PATH ||
+//       path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
+//     : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
 
-console.log(`Frontend build path: ${frontendDistPath}`);
+// Use environment variable for the frontend distribution path
+const frontendDistPath =
+  process.env.FRONTEND_DIST_PATH || path.resolve(__dirname, "..", "dist");
+
+console.log(`Frontend distribution path from env: ${frontendDistPath}`);
 
 console.log(`Serving frontend static files from: ${frontendDistPath}`);
 app.use(express.static(frontendDistPath));
@@ -101,66 +94,58 @@ app.use("/uploads", express.static(uploadsPath));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/roles", authMiddleware, roleRoutes);
-app.use("/api/users", authMiddleware, roleGuard("admin"), userRoutes);
-app.use("/api/zones", authMiddleware, roleGuard("admin"), zoneRoutes);
-app.use("/api/locations", authMiddleware, roleGuard("admin"), locationRoutes);
-app.use("/api/trainings", authMiddleware, roleGuard("admin"), trainingRoutes);
-app.use("/api/states", authMiddleware, roleGuard("admin"), stateRoutes);
+app.use("/api/users", authMiddleware,  userRoutes);
+app.use("/api/zones", authMiddleware,  zoneRoutes);
+app.use("/api/locations", authMiddleware,  locationRoutes);
+app.use("/api/trainings", authMiddleware,  trainingRoutes);
+app.use("/api/states", authMiddleware, stateRoutes);
 app.use(
   "/api/categories",
   authMiddleware,
-  roleGuard("admin", "user"),
   categoryRoutes
 );
-app.use("/api/sites", authMiddleware, roleGuard("admin"), siteRoutes);
-app.use("/api/messages", authMiddleware, roleGuard("admin"), messageRoutes);
+app.use("/api/sites", authMiddleware,  siteRoutes);
+app.use("/api/messages", authMiddleware,  messageRoutes);
 app.use(
   "/api/chapters",
   authMiddleware,
-  roleGuard("admin", "user"),
   chapterRoutes
 );
 app.use(
   "/api/chapter-meetings",
   authMiddleware,
-  roleGuard("admin", "user"),
   chapterMeetingRoutes
 );
 app.use(
   "/api/members",
   authMiddleware,
-  roleGuard("admin", "user"),
   memberRoutes
 );
-app.use("/api/packages", authMiddleware, roleGuard("admin"), packageRoutes);
+app.use("/api/packages", authMiddleware,  packageRoutes);
 app.use(
   "/api/memberships",
   authMiddleware,
-  roleGuard("admin"),
+  
   membershipRoutes
 );
 app.use(
   "/api/visitors",
   authMiddleware,
-  roleGuard("admin", "user"),
   visitorRoutes
 );
 app.use(
   "/api/meeting-attendance",
   authMiddleware,
-  roleGuard("admin", "user"),
   meetingAttendanceRoutes
 );
 app.use(
   "/api/transactionRoutes",
   authMiddleware,
-  roleGuard("admin", "user"),
   transactionRoutes
 );
 app.use(
   "/api/requirements",
   authMiddleware,
-  roleGuard("admin", "user"),
   requirementRoutes
 );
 app.use("/api/statistics", authMiddleware, statisticsRoutes);
@@ -168,55 +153,49 @@ app.use("/api/statistics", authMiddleware, statisticsRoutes);
 app.use(
   "/api/memberreports",
   authMiddleware,
-  roleGuard("admin"),
+  
   memberReportRoutes
 );
 app.use(
   "/api/membershipreports",
   authMiddleware,
-  roleGuard("admin"),
+  
   membershipReportRoutes
 );
 app.use(
   "/api/transactionreports",
   authMiddleware,
-  roleGuard("admin"),
+  
   transactionReportRoutes
 );
 app.use(
   "/api/references",
   authMiddleware,
-  roleGuard("admin", "user"),
   referenceRoutes
 );
 app.use(
   "/api/one-to-ones",
   authMiddleware,
-  roleGuard("admin", "user"),
   oneToOneRoutes
 );
 app.use(
   "/api/thankyou-slips",
   authMiddleware,
-  roleGuard("admin", "user"),
   thankYouSlipRoutes
 );
 app.use(
   "/api/subcategories",
   authMiddleware,
-  roleGuard("admin", "user"),
   subCategoryRoutes
 );
 app.use(
   "/api/chapter-roles",
   authMiddleware,
-  roleGuard("admin", "user"),
   chapterRoleRoutes
 );
 app.use(
   "/api/powerteams",
   authMiddleware,
-  roleGuard("admin", "user"),
   powerTeamRoutes
 );
 app.use(swaggerRouter);
