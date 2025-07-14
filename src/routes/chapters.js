@@ -168,7 +168,7 @@ const { requireChapterRole } = require("../middleware/requireChapterRole");
  *                 totalChapters:
  *                   type: integer
  */
-router.get("/", auth, requireChapterRole('OB'), chapterController.getChapters);
+router.get("/", auth, chapterController.getChapters);
 
 /**
  * @swagger
@@ -197,7 +197,7 @@ router.get("/", auth, requireChapterRole('OB'), chapterController.getChapters);
  *       404:
  *         description: Chapter not found
  */
-router.get("/:id", auth, requireChapterRole('OB'), chapterController.getChapterById);
+router.get("/:id", auth, chapterController.getChapterById);
 
 /**
  * @swagger

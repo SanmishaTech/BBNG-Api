@@ -120,8 +120,14 @@ const createMessage = async (req, res, next) => {
     message: z.string()
       .min(1, "Message cannot be empty")
       .max(5000, "Message must not exceed 5000 characters"),
-    chapterId: z.string().optional().transform(val => val && val !== 'null' ? parseInt(val, 10) : undefined),
-    powerTeamId: z.string().optional().transform(val => val && val !== 'null' ? parseInt(val, 10) : undefined)
+    powerTeamId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
+    chapterId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined)
+  }).refine(data => data.powerTeamId || data.chapterId, {
+    message: "A message must be sent to either a power team or a chapter.",
+    path: ["form"],
+  }).refine(data => !(data.powerTeamId && data.chapterId), {
+    message: "A message can only be sent to a power team or a chapter, not both.",
+    path: ["form"],
   });
 
   // Validate the request body using Zod
@@ -131,64 +137,43 @@ const createMessage = async (req, res, next) => {
   }
 
   const validationResult = await validateRequest(messageSchema, req.body, uploadErrors);
-  
+
   if (!validationResult.success) {
     if (uploadedFile && uploadedFile.path) {
       fs.unlink(uploadedFile.path, (err) => {
         if (err) console.error('Error deleting file after validation failure:', err);
       });
     }
-    return; // Assuming validateRequest handles the response
+    // Ensure response is sent and execution is stopped.
+    return res.status(400).json({ errors: validationResult.errors });
   }
 
-  const { heading, message, chapterId: reqChapterId, powerTeamId: reqPowerTeamId } = validationResult.data;
+  const { heading, message, powerTeamId, chapterId: reqChapterId } = validationResult.data;
 
   try {
+    let powerteamName = null;
+    if (powerTeamId) {
+      const powerTeam = await prisma.powerTeam.findUnique({
+        where: { id: powerTeamId },
+      });
+      if (!powerTeam) {
+        return next(createError(404, "Power team not found."));
+      }
+      powerteamName = powerTeam.name;
+    }
+
     const dataForCreate = {
       heading,
       message,
+      powerteam: powerteamName,
       attachment: uploadedFile ? JSON.stringify(uploadedFile) : null,
       chapterId: undefined, // Initialize as undefined
-      powerTeamId: undefined // Initialize as undefined
     };
 
-    if (userRole === 'admin') {
-      if (reqChapterId && reqPowerTeamId) {
-        if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path); // Clean up uploaded file
-        return next(createError(400, "Message can be sent to either a chapter or a power team, not both."));
-      }
-      if (reqChapterId) {
-        dataForCreate.chapterId = reqChapterId;
-      } else if (reqPowerTeamId) {
-        dataForCreate.powerTeamId = reqPowerTeamId;
-      } else {
-        // Admin must select either a chapter or a power team
-        if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path); // Clean up uploaded file
-        return next(createError(400, "Admin must select a chapter or a power team to send the message to."));
-      }
-    } else if (userRole === 'member') {
-      if (!userChapterId) {
-        if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path); // Clean up uploaded file
-        return next(createError(403, "Member chapter information is missing. Cannot send message."));
-      }
-      if (reqPowerTeamId) {
-        // Members cannot send messages directly to power teams via this input field.
-        // They send to their chapter. Power team specific messages might be a different feature.
-        if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path); // Clean up uploaded file
-        return next(createError(403, "Members can only send messages to their chapter."));
-      }
-      dataForCreate.chapterId = userChapterId;
-    } else {
-      if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path); // Clean up uploaded file
-      return next(createError(403, "You do not have permission to send messages."));
+    if (reqChapterId) {
+      dataForCreate.chapterId = reqChapterId;
     }
 
-    // Final check: ensure only one target ID is set
-    if (dataForCreate.chapterId && dataForCreate.powerTeamId) {
-        // This case should ideally be caught by admin logic above, but as a safeguard:
-        if (uploadedFile && uploadedFile.path) fs.unlinkSync(uploadedFile.path);
-        return next(createError(400, "Internal Server Error: Message target conflict."));
-    }
 
     const newMessage = await prisma.message.create({
       data: dataForCreate
@@ -202,7 +187,8 @@ const createMessage = async (req, res, next) => {
       });
     }
     
-    next(createError(500, "Failed to create message", { cause: error }));
+    console.error("Error creating message:", error);
+    next(createError(500, "Failed to create message", { cause: error.message }));
   }
 };
 

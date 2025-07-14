@@ -230,6 +230,9 @@ const login = async (req, res, next) => {
     console.log("[LOGIN_TRACE] Response should have been sent.");
   } catch (error) {
     console.error("[LOGIN_ERROR] Error during login:", error);
+    if (error.code === 'P2021' || (error.message && error.message.includes('does not exist in the current database'))) {
+      return next(createError(500, "A critical server error occurred. Please contact support."));
+    }
     next(error);
   }
 };

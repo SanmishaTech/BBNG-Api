@@ -977,14 +977,115 @@ const deleteMember = asyncHandler(async (req, res) => {
       throw createError(404, "Member not found");
     }
 
-    // Start transaction to delete both member and associated user
+    // Start transaction to delete member and all related records
     const result = await prisma.$transaction(async (tx) => {
-      // First delete the member record
-      const deletedMember = await tx.member.delete({
-        where: { id: parseInt(id) },
+      const memberId = parseInt(id);
+
+      // Delete related records in correct order to avoid foreign key constraints
+      
+      // 1. Delete zone role history first (references zone roles)
+      await tx.zoneRoleHistory.deleteMany({
+        where: { memberId: memberId }
       });
 
-      // If there's an associated user account, delete it
+      // 2. Delete zone roles
+      await tx.zoneRole.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 3. Delete chapter role history first (references chapter roles)
+      await tx.chapterRoleHistory.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 4. Delete chapter roles
+      await tx.chapterRole.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 5. Delete thank you slips where member is the sender
+      await tx.thankYouSlip.deleteMany({
+        where: { fromMemberId: memberId }
+      });
+
+      // 6. Delete reference status history first (references references)
+      const memberReferences = await tx.reference.findMany({
+        where: {
+          OR: [
+            { giverId: memberId },
+            { receiverId: memberId }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      if (memberReferences.length > 0) {
+        const referenceIds = memberReferences.map(ref => ref.id);
+        await tx.referenceStatusHistory.deleteMany({
+          where: { referenceId: { in: referenceIds } }
+        });
+        
+        // Delete thank you slips related to these references
+        await tx.thankYouSlip.deleteMany({
+          where: { referenceId: { in: referenceIds } }
+        });
+      }
+
+      // 7. Delete references (both given and received)
+      await tx.reference.deleteMany({
+        where: {
+          OR: [
+            { giverId: memberId },
+            { receiverId: memberId }
+          ]
+        }
+      });
+
+      // 8. Delete one-to-ones (both requested and received)
+      await tx.oneToOne.deleteMany({
+        where: {
+          OR: [
+            { requesterId: memberId },
+            { requestedId: memberId }
+          ]
+        }
+      });
+
+      // 9. Delete meeting attendances
+      await tx.meetingAttendance.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 10. Update visitors to remove the invitation reference (set to null instead of delete)
+      await tx.visitor.updateMany({
+        where: { invitedById: memberId },
+        data: { invitedById: null }
+      });
+
+      // 11. Delete requirements
+      await tx.requirement.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 12. Delete memberships
+      await tx.membership.deleteMany({
+        where: { memberId: memberId }
+      });
+
+      // 13. Clear the memberId reference in the User table first
+      if (existingMember.users) {
+        await tx.user.update({
+          where: { id: existingMember.users.id },
+          data: { memberId: null }
+        });
+      }
+
+      // 14. Finally delete the member record
+      const deletedMember = await tx.member.delete({
+        where: { id: memberId },
+      });
+
+      // 15. If there's an associated user account, delete it
       if (existingMember.users) {
         await tx.user.delete({
           where: { id: existingMember.users.id },

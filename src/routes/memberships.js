@@ -42,7 +42,7 @@ const isAdmin = (req, res, next) => {
  *         packageEndDate:
  *           type: string
  *           format: date
- *           description: Package end date (typically March 30th of financial year)
+ *           description: Package end date (calculated as start date + package duration, capped at March 31st)
  *         basicFees:
  *           type: number
  *           description: Basic fees amount

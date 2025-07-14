@@ -49,7 +49,7 @@ const getVisitors = asyncHandler(async (req, res) => {
   const limit = Math.max(1, parseInt(req.query.limit) || 10);
   const skip = (page - 1) * limit;
 
-  const { search = "", meetingId, status, chapterId, fromDate, toDate } = req.query;
+  const { search = "", meetingId, status, chapterId, fromDate, toDate, isCrossChapter } = req.query;
   const sortBy = req.query.sortBy || "createdAt";
   const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
 
@@ -81,6 +81,11 @@ const getVisitors = asyncHandler(async (req, res) => {
   
   if (status) {
     filters.push({ status });
+  }
+
+  // Filter by isCrossChapter flag
+  if (isCrossChapter !== undefined && isCrossChapter !== '') {
+    filters.push({ isCrossChapter: isCrossChapter === 'true' });
   }
 
   // Chapter and Meeting filtering logic
@@ -130,7 +135,12 @@ const getVisitors = asyncHandler(async (req, res) => {
       orderBy: { [sortBy]: sortOrder },
       include: {
         meeting: true,
-        invitedByMember: true,
+        invitedByMember: {
+          include: {
+            chapter: true
+          }
+        },
+        homeChapter: true
       },
     }),
     prisma.visitor.count({ where }),
@@ -325,6 +335,14 @@ const createVisitor = asyncHandler(async (req, res) => {
     visitorData.chapterId = meeting.chapterId;
     visitorData.chapter = meeting.chapter?.name || "";
   }
+  
+  // Clean up empty fields for all visitors - now all fields are optional in the schema
+  const fieldsToNullify = ['name', 'email', 'gender', 'mobile1', 'mobile2', 'businessDetails', 'addressLine1', 'addressLine2', 'city', 'pincode', 'category', 'status'];
+  fieldsToNullify.forEach(field => {
+    if (visitorData[field] === '' || visitorData[field] === undefined) {
+      visitorData[field] = null;
+    }
+  });
 
   const visitor = await prisma.visitor.create({
     data: visitorData,
@@ -372,7 +390,25 @@ const getVisitorById = asyncHandler(async (req, res) => {
       }
   }
 
-  res.json(visitor);
+  // Convert null values to empty strings for frontend form handling
+  const sanitizedVisitor = {
+    ...visitor,
+    name: visitor.name || '',
+    email: visitor.email || '',
+    gender: visitor.gender || '',
+    mobile1: visitor.mobile1 || '',
+    mobile2: visitor.mobile2 || '',
+    chapter: visitor.chapter || '',
+    category: visitor.category || '',
+    businessDetails: visitor.businessDetails || '',
+    addressLine1: visitor.addressLine1 || '',
+    addressLine2: visitor.addressLine2 || '',
+    city: visitor.city || '',
+    pincode: visitor.pincode || '',
+    status: visitor.status || '',
+  };
+  
+  res.json(sanitizedVisitor);
 });
 
 /** PUT /api/visitors/:id
@@ -573,6 +609,14 @@ const updateVisitor = asyncHandler(async (req, res) => {
     updateData.chapterId = existing.meeting.chapterId;
     updateData.chapter = existing.meeting.chapter?.name || "";
   }
+  
+  // Clean up empty fields for update - convert empty strings to null
+  const fieldsToNullify = ['name', 'email', 'gender', 'mobile1', 'mobile2', 'businessDetails', 'addressLine1', 'addressLine2', 'city', 'pincode', 'category', 'status', 'chapter'];
+  fieldsToNullify.forEach(field => {
+    if (updateData[field] === '' || updateData[field] === undefined) {
+      updateData[field] = null;
+    }
+  });
 
   const updated = await prisma.visitor.update({
     where: { id },

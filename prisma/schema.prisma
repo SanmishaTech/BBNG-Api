@@ -80,7 +80,7 @@ model Category {
 model subCategory {
   id         Int      @id @default(autoincrement())
   name       String
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) // Note: Consider @updatedAt
@@ -130,7 +130,7 @@ model State {
 model Message {
   id         Int      @id @default(autoincrement())
   heading    String   @db.VarChar(255)
-  powerteam  String   @db.VarChar(100)
+  powerteam  String?  @db.VarChar(100)
   message    String   @db.Text
   attachment String?  @db.Text
   createdAt  DateTime @default(now())
@@ -179,7 +179,7 @@ model Member {
   memberName              String
   chapterId               Int?
  
-  chapter                 Chapter? @relation(fields: [chapterId], references: [id])
+  chapter                 Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
   stateId                 Int?
   state                   State?   @relation(fields: [stateId], references: [id])
    chapterRoles            ChapterRole[]
@@ -335,21 +335,21 @@ model ChapterMeeting {
 model Visitor {
   id             Int       @id @default(autoincrement())
   // Basic Details
-  name           String
+  name           String?
   email          String?
-  gender         String
+  gender         String?
   dateOfBirth    DateTime?
-  mobile1        String
+  mobile1        String?
   mobile2        String?
   isCrossChapter Boolean   @default(false)
 
   // Chapter & Meeting Information
-  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id])
+  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   meetingId Int
 
   homeChapter Chapter? @relation(name: "VisitorHomeChapter", fields: [chapterId], references: [id])
   chapterId   Int? // Home chapter for cross-chapter visitors
-  chapter     String // Chapter name for non-members
+  chapter     String? // Chapter name for non-members
 
   invitedById     Int?
   invitedByMember Member? @relation(fields: [invitedById], references: [id])
@@ -376,7 +376,7 @@ model Visitor {
 model MeetingAttendance {
   id Int @id @default(autoincrement())
 
-  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id])
+  meeting   ChapterMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   meetingId Int
 
   member   Member @relation(fields: [memberId], references: [id])
