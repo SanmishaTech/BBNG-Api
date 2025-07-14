@@ -138,7 +138,6 @@ const acl = require("../middleware/acl");
 router.post(
   "/",
   auth,
-  acl("requirements.write"),
   requirementController.createRequirement
 );
 
@@ -200,7 +199,6 @@ router.post(
 router.get(
   "/",
   auth,
-  acl("requirements.read"),
   requirementController.getAllRequirements
 );
 
@@ -290,7 +288,6 @@ router.get(
 router.get(
   "/member/:memberId",
   auth,
-  acl("requirements.read"),
   requirementController.getRequirementsByMember
 );
 
@@ -364,7 +361,6 @@ router.get(
 router.delete(
   "/:id",
   auth,
-  acl("requirements.delete"),
   requirementController.deleteRequirement
 );
 

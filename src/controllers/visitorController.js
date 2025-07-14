@@ -201,11 +201,8 @@ const createVisitor = asyncHandler(async (req, res) => {
       });
     }
     
-    // For non-cross-chapter visitors, use the meeting's chapter
-    if (!data.isCrossChapter && meeting) {
-      data.chapterId = meeting.chapterId;
-      data.chapter = meeting.chapter?.name || "";
-    }
+    // For non-cross-chapter visitors, chapter selection is manual
+    // Removed automatic chapter assignment - users should select the chapter themselves
 
     // Validate required fields based on isCrossChapter flag
     if (data.isCrossChapter) {
@@ -239,6 +236,14 @@ const createVisitor = asyncHandler(async (req, res) => {
         ctx.addIssue({
           path: ["chapter"],
           message: "Chapter name is required for non-cross-chapter visitors",
+          code: z.ZodIssueCode.custom,
+        });
+      }
+      
+      if (!data.chapterId) {
+        ctx.addIssue({
+          path: ["chapterId"],
+          message: "Chapter selection is required for non-cross-chapter visitors",
           code: z.ZodIssueCode.custom,
         });
       }
@@ -330,11 +335,8 @@ const createVisitor = asyncHandler(async (req, res) => {
     dateOfBirth: req.body.dateOfBirth ? new Date(req.body.dateOfBirth) : null,
   };
   
-  // For non-cross-chapter visitors, ensure we use the meeting's chapter
-  if (!req.body.isCrossChapter && meeting) {
-    visitorData.chapterId = meeting.chapterId;
-    visitorData.chapter = meeting.chapter?.name || "";
-  }
+  // For non-cross-chapter visitors, use the chapter selected by the user
+  // No automatic assignment - the chapter should come from the form submission
   
   // Clean up empty fields for all visitors - now all fields are optional in the schema
   const fieldsToNullify = ['name', 'email', 'gender', 'mobile1', 'mobile2', 'businessDetails', 'addressLine1', 'addressLine2', 'city', 'pincode', 'category', 'status'];
@@ -582,7 +584,10 @@ const updateVisitor = asyncHandler(async (req, res) => {
   const valid = await validateRequest(schema, req.body, res);
   if (!valid) return;
 
-  const existing = await prisma.visitor.findUnique({ where: { id } });
+  const existing = await prisma.visitor.findUnique({ 
+    where: { id },
+    include: { meeting: { include: { chapter: true } } }
+  });
   if (!existing) throw createError(404, "Visitor not found");
 
   const user = req.user;
@@ -604,11 +609,8 @@ const updateVisitor = asyncHandler(async (req, res) => {
     updateData.dateOfBirth = new Date(updateData.dateOfBirth);
   }
 
-  // For non-cross-chapter visitors, use the meeting's chapter
-  if (updateData.isCrossChapter === false && existing?.meeting) {
-    updateData.chapterId = existing.meeting.chapterId;
-    updateData.chapter = existing.meeting.chapter?.name || "";
-  }
+  // For non-cross-chapter visitors, use the chapter selected by the user
+  // No automatic assignment - the chapter should come from the form submission
   
   // Clean up empty fields for update - convert empty strings to null
   const fieldsToNullify = ['name', 'email', 'gender', 'mobile1', 'mobile2', 'businessDetails', 'addressLine1', 'addressLine2', 'city', 'pincode', 'category', 'status', 'chapter'];
