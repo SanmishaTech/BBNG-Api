@@ -236,6 +236,7 @@ const getPerformanceData = asyncHandler(async (req, res) => {
             oneToOneMeetings,
             referencesGiven,
             referencesReceived,
+            visitorsInvited,
           ] = await Promise.all([
             // Business Generated (Thank You Slips sent by this member)
             prisma.thankYouSlip.findMany({
@@ -284,6 +285,15 @@ const getPerformanceData = asyncHandler(async (req, res) => {
                 ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
               },
             }),
+
+            // Visitors Invited
+            prisma.visitor.count({
+              where: {
+                invitedById: member.id,
+                chapterId: chapterId,
+                ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+              },
+            }),
           ]);
 
           // Calculate totals from the fetched slips
@@ -319,6 +329,7 @@ const getPerformanceData = asyncHandler(async (req, res) => {
             oneToOneMeetings: oneToOneMeetings,
             referencesGiven: referencesGiven,
             referencesReceived: referencesReceived,
+            visitorsInvited: visitorsInvited,
           };
         })
       );
@@ -347,6 +358,10 @@ const getPerformanceData = asyncHandler(async (req, res) => {
           ),
           totalReferencesReceived: memberPerformance.reduce(
             (sum, m) => sum + m.referencesReceived,
+            0
+          ),
+          totalVisitorsInvited: memberPerformance.reduce(
+            (sum, m) => sum + m.visitorsInvited,
             0
           ),
         },
@@ -381,6 +396,10 @@ const getPerformanceData = asyncHandler(async (req, res) => {
     ),
     totalReferencesReceived: validChapters.reduce(
       (sum, c) => sum + c.summary.totalReferencesReceived,
+      0
+    ),
+    totalVisitorsInvited: validChapters.reduce(
+      (sum, c) => sum + c.summary.totalVisitorsInvited,
       0
     ),
   };
@@ -675,6 +694,7 @@ const getChaptersInZone = asyncHandler(async (req, res) => {
       oneToOneMeetings: 0,
       referencesGiven: 0,
       referencesReceived: 0,
+      visitorsInvited: 0,
     })),
     summary: {
       totalMembers: chapter.members.length,
@@ -683,6 +703,7 @@ const getChaptersInZone = asyncHandler(async (req, res) => {
       totalOneToOnes: 0,
       totalReferencesGiven: 0,
       totalReferencesReceived: 0,
+      totalVisitorsInvited: 0,
     },
   }));
 
