@@ -41,7 +41,26 @@ const getUserRoleAndAccess = async (userId) => {
 
   // 1. Check Zone-Level Assignments (Regional Director / Joint Secretary)
   if (member.zoneRoles && member.zoneRoles.length > 0) {
-    inferredRole = "regional_director";
+    // Properly distinguish between Regional Director and Joint Secretary
+    const regionalDirectorRoles = member.zoneRoles.filter(
+      (role) =>
+        role.roleType === "Regional Director" ||
+        role.roleType === "regionalDirector"
+    );
+
+    const jointSecretaryRoles = member.zoneRoles.filter(
+      (role) =>
+        role.roleType === "Joint Secretary" ||
+        role.roleType === "jointSecretary"
+    );
+
+    // Regional Director takes precedence
+    if (regionalDirectorRoles.length > 0) {
+      inferredRole = "regional_director";
+    } else if (jointSecretaryRoles.length > 0) {
+      inferredRole = "joint_secretary";
+    }
+
     roleDetails.zoneRoles = member.zoneRoles.map((zr) => ({
       roleType: zr.roleType,
       zoneName: zr.zone.name,
@@ -61,12 +80,15 @@ const getUserRoleAndAccess = async (userId) => {
     });
   }
 
-  // 2. Check Chapter-Level Assignments (All Chapter Roles)
+  // 2. Check Chapter-Level Assignments (Properly distinguish roles)
   if (member.chapterRoles && member.chapterRoles.length > 0) {
-    // Include ALL chapter role types
+    // Separate guardian roles from development coordinator roles
     const guardianRoles = member.chapterRoles.filter(
+      (cr) => cr.roleType === "guardian"
+    );
+
+    const developmentCoordinatorRoles = member.chapterRoles.filter(
       (cr) =>
-        cr.roleType === "guardian" ||
         cr.roleType === "districtCoordinator" ||
         cr.roleType === "regionalCoordinator" ||
         cr.roleType === "developmentCoordinator"
@@ -80,11 +102,17 @@ const getUserRoleAndAccess = async (userId) => {
     );
 
     // Combine all chapter roles
-    const allChapterRoles = [...guardianRoles, ...obRoles];
+    const allChapterRoles = [
+      ...guardianRoles,
+      ...developmentCoordinatorRoles,
+      ...obRoles,
+    ];
 
     if (allChapterRoles.length > 0) {
-      // Determine primary role based on hierarchy
+      // Determine primary role based on hierarchy and specific role types
       if (guardianRoles.length > 0) {
+        if (inferredRole === "member") inferredRole = "guardian";
+      } else if (developmentCoordinatorRoles.length > 0) {
         if (inferredRole === "member") inferredRole = "development_coordinator";
       } else if (obRoles.length > 0) {
         if (inferredRole === "member") inferredRole = "office_bearer";
@@ -96,18 +124,27 @@ const getUserRoleAndAccess = async (userId) => {
         chapterId: cr.chapter.id,
       }));
 
-      // Add unique chapters to access scope
+      // Add unique chapters to access scope with proper access type
       const chapterMap = new Map();
       allChapterRoles.forEach((role) => {
         if (!chapterMap.has(role.chapter.id)) {
+          let accessType = "office_bearer";
+
+          // Determine access type based on specific role
+          if (guardianRoles.some((gr) => gr.chapter.id === role.chapter.id)) {
+            accessType = "chapter_guardian";
+          } else if (
+            developmentCoordinatorRoles.some(
+              (dcr) => dcr.chapter.id === role.chapter.id
+            )
+          ) {
+            accessType = "development_coordinator";
+          }
+
           chapterMap.set(role.chapter.id, {
             chapterId: role.chapter.id,
             chapterName: role.chapter.name,
-            accessType: guardianRoles.some(
-              (gr) => gr.chapter.id === role.chapter.id
-            )
-              ? "chapter_guardian"
-              : "office_bearer",
+            accessType: accessType,
             roles: [],
           });
         }
