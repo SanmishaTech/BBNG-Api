@@ -581,9 +581,81 @@ const getMemberPerformance = asyncHandler(async (req, res) => {
   });
 });
 
+// Get chapters in a specific zone
+const getChaptersInZone = asyncHandler(async (req, res) => {
+  const { zoneName } = req.query;
+  const roleInfo = await getUserRoleAndAccess(req.user.id);
+
+  if (!zoneName) {
+    throw createError(400, "Zone name is required");
+  }
+
+  // Check if user has access to this zone
+  const hasZoneAccess = roleInfo.accessScope.some(
+    (scope) => scope.accessType === "zone" && scope.zoneName === zoneName
+  );
+
+  if (!hasZoneAccess) {
+    throw createError(403, "Access denied to this zone");
+  }
+
+  // Get the zone and its chapters
+  const zone = await prisma.zone.findFirst({
+    where: { name: zoneName },
+    include: {
+      chapters: {
+        where: { status: true },
+        include: {
+          members: {
+            where: { active: true },
+            select: {
+              id: true,
+              memberName: true,
+              organizationName: true,
+              category: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!zone) {
+    throw createError(404, "Zone not found");
+  }
+
+  // Format the response to match ChapterPerformance interface
+  const chaptersWithBasicInfo = zone.chapters.map((chapter) => ({
+    chapterId: chapter.id,
+    chapterName: chapter.name,
+    members: chapter.members.map((member) => ({
+      memberId: member.id,
+      memberName: member.memberName,
+      organizationName: member.organizationName,
+      category: member.category,
+      businessGenerated: { amount: 0, count: 0 },
+      businessReceived: { amount: 0, count: 0 },
+      oneToOneMeetings: 0,
+      referencesGiven: 0,
+      referencesReceived: 0,
+    })),
+    summary: {
+      totalMembers: chapter.members.length,
+      totalBusinessGenerated: 0,
+      totalBusinessReceived: 0,
+      totalOneToOnes: 0,
+      totalReferencesGiven: 0,
+      totalReferencesReceived: 0,
+    },
+  }));
+
+  res.json(chaptersWithBasicInfo);
+});
+
 module.exports = {
   getUserRoleInfo,
   getPerformanceData,
   getChapterSummary,
   getMemberPerformance,
+  getChaptersInZone,
 };

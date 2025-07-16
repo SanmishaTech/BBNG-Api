@@ -23,4 +23,10 @@ router.get(
   performanceDashboardController.getMemberPerformance
 );
 
+// Get chapters in a specific zone
+router.get(
+  "/chapters-in-zone",
+  performanceDashboardController.getChaptersInZone
+);
+
 module.exports = router;
