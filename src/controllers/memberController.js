@@ -1717,6 +1717,182 @@ const getReceivedTestimonialsForMember = asyncHandler(async (req, res, next) => 
   }
 });
 
+/**
+ * Update the current user's own member profile
+ * @route PUT /api/members/profile
+ */
+const updateOwnProfile = asyncHandler(async (req, res) => {
+  try {
+    // Ensure we have a user ID from authentication
+    if (!req.user || !req.user.id) {
+      throw createError(401, "Not authenticated");
+    }
+
+    const userId = req.user.id;
+
+    // Find member profile for current user
+    const existingMember = await prisma.member.findFirst({
+      where: { userId },
+      include: { users: true },
+    });
+
+    if (!existingMember) {
+      throw createError(404, "Member profile not found for current user");
+    }
+
+    // Handle request body
+    const body = { ...req.body };
+
+    // Convert dateOfBirth to dateOfBirth if it exists
+    if (body.dateOfBirth) {
+      const dateOfBirth = new Date(body.dateOfBirth);
+      if (isNaN(dateOfBirth.getTime())) {
+        throw createError(400, "Invalid date format for date of birth");
+      }
+      body.dateOfBirth = dateOfBirth;
+    }
+
+    if (typeof body.businessCategory === "number") {
+      body.businessCategory = body.businessCategory.toString();
+    }
+
+    // Don't allow members to change certain fields
+    const restrictedFields = ['chapterId', 'stateId', 'category', 'active', 'hoExpiryDate', 'venueExpiryDate'];
+    restrictedFields.forEach(field => {
+      if (field in body) {
+        delete body[field];
+      }
+    });
+
+    // Start transaction to update both member and user
+    const result = await prisma.$transaction(async (tx) => {
+      // Prepare member update data
+      const memberUpdateData = { ...body };
+
+      // Handle file uploads if present
+      if (req.files) {
+        Object.entries(req.files).forEach(([key, files]) => {
+          if (Array.isArray(files) && files.length > 0) {
+            const file = files[0];
+            // Build the complete path using the UUID from the request
+            const uuid = req.fileUUID[key];
+            const fullPath = path.join(
+              "uploads",
+              "members",
+              key,
+              uuid,
+              file.originalname,
+            );
+            memberUpdateData[key] = fullPath; // Store the complete path
+          }
+        });
+      }
+
+      // If password is being updated, hash it
+      if (memberUpdateData.password) {
+        memberUpdateData.password = await bcrypt.hash(
+          memberUpdateData.password,
+          10,
+        );
+      }
+
+      // Update the member record
+      const updatedMember = await tx.member.update({
+        where: { id: existingMember.id },
+        data: memberUpdateData,
+        include: {
+          chapter: {
+            select: {
+              id: true,
+              name: true,
+              location: {
+                select: {
+                  id: true,
+                  location: true,
+                },
+              },
+              zones: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          users: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              active: true,
+              lastLogin: true,
+            },
+          },
+        },
+      });
+
+      // Update the associated user if email or password changed
+      if (existingMember.users && (body.email || body.password)) {
+        const userUpdateData = {};
+        if (body.email) userUpdateData.email = body.email;
+        if (body.password) {
+          userUpdateData.password = await bcrypt.hash(body.password, 10);
+        }
+
+        await tx.user.update({
+          where: { id: existingMember.users.id },
+          data: userUpdateData,
+        });
+      }
+
+      return updatedMember;
+    });
+
+    // Remove sensitive data before sending response
+    const { password: _, ...sanitizedMember } = result;
+    res.json(sanitizedMember);
+  } catch (error) {
+    // Handle cleanup of uploaded files if the transaction failed
+    if (req.files) {
+      for (const fieldKey of Object.keys(req.files)) {
+        const fileArray = req.files[fieldKey];
+        if (Array.isArray(fileArray)) {
+          for (const file of fileArray) {
+            if (file && file.filename) {
+              try {
+                await fs.unlink(
+                  path.join(
+                    __dirname,
+                    "../../../uploads/members",
+                    file.filename,
+                  ),
+                );
+              } catch (cleanupError) {
+                console.error(
+                  `Error deleting file ${file.filename} during cleanup:`,
+                  cleanupError,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        // Handle unique constraint violations
+        const field = Array.isArray(error.meta?.target)
+          ? error.meta.target.join(", ")
+          : String(error.meta?.target);
+        throw createError(400, `A record with this ${field} already exists`);
+      }
+    }
+    throw error;
+  }
+});
+
 module.exports = {
   createMember,
   getMembers,
@@ -1732,4 +1908,5 @@ module.exports = {
   getMemberActivitySummary,
   getMemberTestimonials,
   getReceivedTestimonialsForMember,
+  updateOwnProfile,
 };

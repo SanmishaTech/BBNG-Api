@@ -35,6 +35,7 @@ const chapterRoleRoutes = require("./routes/chapterRoles");
 const subCategoryRoutes = require("./routes/subCategory");
 const statisticsRoutes = require("./routes/statistics");
 const powerTeamRoutes = require("./routes/powerTeamRoutes");
+const performanceDashboardRoutes = require("./routes/performanceDashboard");
 
 const responseWrapper = require("./middleware/responseWrapper");
 const swaggerRouter = require("./swagger");
@@ -94,109 +95,62 @@ app.use("/uploads", express.static(uploadsPath));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/roles", authMiddleware, roleRoutes);
-app.use("/api/users", authMiddleware,  userRoutes);
-app.use("/api/zones", authMiddleware,  zoneRoutes);
-app.use("/api/locations", authMiddleware,  locationRoutes);
-app.use("/api/trainings", authMiddleware,  trainingRoutes);
+app.use("/api/users", authMiddleware, userRoutes);
+app.use("/api/zones", authMiddleware, zoneRoutes);
+app.use("/api/locations", authMiddleware, locationRoutes);
+app.use("/api/trainings", authMiddleware, trainingRoutes);
 app.use("/api/states", authMiddleware, stateRoutes);
-app.use(
-  "/api/categories",
-  authMiddleware,
-  categoryRoutes
-);
-app.use("/api/sites", authMiddleware,  siteRoutes);
-app.use("/api/messages", authMiddleware,  messageRoutes);
-app.use(
-  "/api/chapters",
-  authMiddleware,
-  chapterRoutes
-);
-app.use(
-  "/api/chapter-meetings",
-  authMiddleware,
-  chapterMeetingRoutes
-);
+app.use("/api/categories", authMiddleware, categoryRoutes);
+app.use("/api/sites", authMiddleware, siteRoutes);
+app.use("/api/messages", authMiddleware, messageRoutes);
+app.use("/api/chapters", authMiddleware, chapterRoutes);
+app.use("/api/chapter-meetings", authMiddleware, chapterMeetingRoutes);
 app.use(
   "/api/members",
-  authMiddleware,
+  // authMiddleware,
   memberRoutes
 );
-app.use("/api/packages", authMiddleware,  packageRoutes);
+app.use("/api/packages", authMiddleware, packageRoutes);
 app.use(
   "/api/memberships",
   authMiddleware,
-  
+
   membershipRoutes
 );
-app.use(
-  "/api/visitors",
-  authMiddleware,
-  visitorRoutes
-);
-app.use(
-  "/api/meeting-attendance",
-  authMiddleware,
-  meetingAttendanceRoutes
-);
-app.use(
-  "/api/transactionRoutes",
-  authMiddleware,
-  transactionRoutes
-);
-app.use(
-  "/api/requirements",
-  authMiddleware,
-  requirementRoutes
-);
+app.use("/api/visitors", authMiddleware, visitorRoutes);
+app.use("/api/meeting-attendance", authMiddleware, meetingAttendanceRoutes);
+app.use("/api/transactionRoutes", authMiddleware, transactionRoutes);
+app.use("/api/requirements", authMiddleware, requirementRoutes);
 app.use("/api/statistics", authMiddleware, statisticsRoutes);
 
 app.use(
   "/api/memberreports",
   authMiddleware,
-  
+
   memberReportRoutes
 );
 app.use(
   "/api/membershipreports",
   authMiddleware,
-  
+
   membershipReportRoutes
 );
 app.use(
   "/api/transactionreports",
   authMiddleware,
-  
+
   transactionReportRoutes
 );
+app.use("/api/references", authMiddleware, referenceRoutes);
+app.use("/api/one-to-ones", authMiddleware, oneToOneRoutes);
+app.use("/api/thankyou-slips", authMiddleware, thankYouSlipRoutes);
+app.use("/api/subcategories", authMiddleware, subCategoryRoutes);
+app.use("/api/chapter-roles", authMiddleware, chapterRoleRoutes);
+app.use("/api/powerteams", authMiddleware, powerTeamRoutes);
 app.use(
-  "/api/references",
+  "/api/performance-dashboard",
   authMiddleware,
-  referenceRoutes
-);
-app.use(
-  "/api/one-to-ones",
-  authMiddleware,
-  oneToOneRoutes
-);
-app.use(
-  "/api/thankyou-slips",
-  authMiddleware,
-  thankYouSlipRoutes
-);
-app.use(
-  "/api/subcategories",
-  authMiddleware,
-  subCategoryRoutes
-);
-app.use(
-  "/api/chapter-roles",
-  authMiddleware,
-  chapterRoleRoutes
-);
-app.use(
-  "/api/powerteams",
-  authMiddleware,
-  powerTeamRoutes
+  performanceDashboardRoutes
 );
 app.use(swaggerRouter);
 
