@@ -4,3 +4,4 @@ prisma/migrations
 /uploads
 /bun.lockb
 bun.lockb
+.env.production
