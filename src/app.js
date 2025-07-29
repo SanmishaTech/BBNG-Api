@@ -57,15 +57,21 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: true, // Allow all origins
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: true, // Allow all origins
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//     credentials: true,
+//   })
+// );
 
+const corsOptions = {
+  origin: "*", // Specify the origin of your frontend application
+  credentials: true, // This allows cookies and credentials to be included in the requests
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
