@@ -36,11 +36,6 @@ const subCategoryRoutes = require("./routes/subCategory");
 const statisticsRoutes = require("./routes/statistics");
 const powerTeamRoutes = require("./routes/powerTeamRoutes");
 
-const fs = require("fs");
-
-const http = require("http");
-
-const https = require("https");
 const responseWrapper = require("./middleware/responseWrapper");
 const swaggerRouter = require("./swagger");
 const referenceRoutes = require("./routes/referenceRoutes");
@@ -53,28 +48,14 @@ app.use(morgan("dev"));
 // Apply response wrapper middleware globally to normalise all responses
 app.use(responseWrapper);
 
-
 app.use(
   helmet({
-    crossOriginOpenerPolicy: { policy: "same-origin" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy:
       process.env.NODE_ENV === "production" ? undefined : false,
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource sharing
   })
-
 );
-app.use((req, res, next) => {
-
-  res.removeHeader("Origin-Agent-Cluster");
-
-  next();
-
-});
-
-
-
-// CORS
 
 app.use(
   cors({
@@ -271,45 +252,3 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
-
-
-
-// =============================================================================
-
-// HTTPS + HTTP→HTTPS redirector
-
-// =============================================================================
-
-const sslOptions = {
-
-  key:  fs.readFileSync(process.env.SSL_KEY_PATH),
-
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
-
-};
-
-
-
-https
-
-  .createServer(sslOptions, app)
-
-  .listen(443, () => console.log("✅ HTTPS listening on 443"));
-
-
-
-http
-
-  .createServer((req, res) => {
-
-    res.writeHead(301, {
-
-      Location: "https://" + req.headers.host + req.url,
-
-    });
-
-    res.end();
-
-  })
-
-  .listen(80, () => console.log("🔄 HTTP→HTTPS redirector on 80"));
