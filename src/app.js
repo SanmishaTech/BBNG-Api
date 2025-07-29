@@ -47,15 +47,7 @@ app.use(morgan("dev"));
 
 // Apply response wrapper middleware globally to normalise all responses
 app.use(responseWrapper);
-
-app.use(
-  helmet({
-    crossOriginOpenerPolicy: false,
-    crossOriginEmbedderPolicy: false
-  })
-);
-
-
+ 
 // app.use(
 //   cors({
 //     origin: true, // Allow all origins
