@@ -56,27 +56,24 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: true, // Allow all origins
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: "*", // Specify the origin of your frontend application
+  credentials: true, // This allows cookies and credentials to be included in the requests
+};
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const frontendDistPath =
-  process.env.NODE_ENV === "production"
-    ? process.env.FRONTEND_PATH ||
-      path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
-    : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
+// const frontendDistPath =
+//   process.env.NODE_ENV === "production"
+//     ? process.env.FRONTEND_PATH ||
+//       path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
+//     : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
 
 // Use environment variable for the frontend distribution path
-// const frontendDistPath =
-//   process.env.FRONTEND_DIST_PATH || path.resolve(__dirname, "..", "dist");
+const frontendDistPath =
+  process.env.FRONTEND_DIST_PATH || path.resolve(__dirname, "..", "dist");
 
 console.log(`Frontend distribution path from env: ${frontendDistPath}`);
 
