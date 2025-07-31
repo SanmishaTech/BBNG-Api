@@ -80,7 +80,7 @@ const generateInvoicePdf = async (invoiceData, filePath) => {
 
   // Company details from image (can be passed in bbnGlobal or hardcoded/configured elsewhere)
   const companyDetails = bbnGlobal || {
-     name: 'BBN Global',
+     name: 'BBN Global ',
     addressLines: ['2/3, Gomati Apartment,', 'Boy\'s Town Road, Nashik, Maharashtra - 422002'],
     gstinUin: '27AAHCB7744A1ZT',
     email: 'bbnglobal.ho@gmail.com',
