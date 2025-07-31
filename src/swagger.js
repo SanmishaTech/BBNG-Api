@@ -10,16 +10,17 @@ const options = {
     info: {
       title: "BBNG API",
       version: "1.0.0",
-      description: "Business Builders Networking Group (BBNG) REST API for managing memberships, members, chapters, meetings, and more.",
+      description:
+        "Business Builders Networking Group (BBNG) REST API for managing memberships, members, chapters, meetings, and more.",
       contact: {
         name: "BBNG Development Team",
-        email: "support@bbng.com"
-      }
+        email: "support@bbng.com",
+      },
     },
     servers: [
       {
-        url: "http://localhost:3000/",
-        description: "Development server"
+        url: "http://47.128.201.96/",
+        description: "Development server",
       },
     ],
     components: {
