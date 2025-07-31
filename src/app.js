@@ -68,15 +68,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// const frontendDistPath =
-//   process.env.NODE_ENV === "production"
-//     ? process.env.FRONTEND_PATH ||
-//       path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
-//     : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
+const frontendDistPath =
+  process.env.NODE_ENV === "production"
+    ? process.env.FRONTEND_PATH ||
+      path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist")
+    : path.resolve(__dirname, "..", "..", "BBNG-FrontEnd", "dist");
 
 // Use environment variable for the frontend distribution path
-const frontendDistPath =
-  process.env.FRONTEND_DIST_PATH || path.resolve(__dirname, "..", "dist");
+// const frontendDistPath =
+//   process.env.FRONTEND_DIST_PATH || path.resolve(__dirname, "..", "dist");
 
 console.log(`Frontend distribution path from env: ${frontendDistPath}`);
 
