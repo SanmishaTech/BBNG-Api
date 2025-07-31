@@ -53,11 +53,15 @@ app.use(
   helmet({
     crossOriginOpenerPolicy: false,
     crossOriginEmbedderPolicy: false,
+    // Disable Origin-Agent-Cluster header to prevent clustering issues
+    originAgentCluster: false,
   })
 );
 
 const corsOptions = {
-  origin: "*", // Specify the origin of your frontend application
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : "*",
   credentials: true, // This allows cookies and credentials to be included in the requests
 };
 app.use(cors(corsOptions));
