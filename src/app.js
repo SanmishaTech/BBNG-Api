@@ -44,32 +44,50 @@ const thankYouSlipRoutes = require("./routes/thankYouSlipRoutes");
 
 const app = express();
 
+// Middleware to redirect HTTPS to HTTP for development - MUST BE FIRST
+app.use((req, res, next) => {
+  // Check if request is HTTPS
+  const isHttps =
+    req.headers["x-forwarded-proto"] === "https" ||
+    req.secure ||
+    req.headers["x-forwarded-ssl"] === "on" ||
+    req.connection.encrypted;
+
+  if (isHttps) {
+    const httpUrl = `http://${req.headers.host}${req.url}`;
+    console.log(`Redirecting HTTPS to HTTP: ${req.url} -> ${httpUrl}`);
+    return res.redirect(301, httpUrl);
+  }
+  next();
+});
+
 app.use(morgan("dev"));
 
 // Apply response wrapper middleware globally to normalise all responses
 app.use(responseWrapper);
 
-app.use(
-  helmet({
-    crossOriginOpenerPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    // Disable Origin-Agent-Cluster header to prevent clustering issues
-    originAgentCluster: false,
-    // Allow mixed content (HTTP assets on HTTPS pages)
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
-        imgSrc: ["'self'", "data:", "https:", "http:"],
-        fontSrc: ["'self'", "https:", "http:", "data:"],
-        connectSrc: ["'self'", "https:", "http:"],
-      },
-    },
-    // Disable HSTS to prevent forcing HTTPS
-    hsts: false,
-  })
-);
+// Completely disable Helmet for development to avoid HTTPS issues
+// app.use(
+//   helmet({
+//     crossOriginOpenerPolicy: false,
+//     crossOriginEmbedderPolicy: false,
+//     // Disable Origin-Agent-Cluster header to prevent clustering issues
+//     originAgentCluster: false,
+//     // Allow mixed content (HTTP assets on HTTPS pages)
+//     contentSecurityPolicy: {
+//       directives: {
+//         defaultSrc: ["'self'"],
+//         styleSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
+//         scriptSrc: ["'self'", "'unsafe-inline'", "https:", "http:"],
+//         imgSrc: ["'self'", "data:", "https:", "http:"],
+//         fontSrc: ["'self'", "https:", "http:", "data:"],
+//         connectSrc: ["'self'", "https:", "http:"],
+//       },
+//     },
+//     // Disable HSTS to prevent forcing HTTPS
+//     hsts: false,
+//   })
+// );
 
 const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS
@@ -81,14 +99,6 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Middleware to redirect HTTPS to HTTP for development
-app.use((req, res, next) => {
-  if (req.headers["x-forwarded-proto"] === "https" || req.secure) {
-    return res.redirect(301, `http://${req.headers.host}${req.url}`);
-  }
-  next();
-});
 
 // const frontendDistPath =
 //   process.env.NODE_ENV === "production"
