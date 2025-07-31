@@ -51,10 +51,8 @@ app.use(responseWrapper);
 
 app.use(
   helmet({
+    crossOriginOpenerPolicy: false,
     crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy:
-      process.env.NODE_ENV === "production" ? undefined : false,
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource sharing
   })
 );
 
