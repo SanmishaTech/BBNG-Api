@@ -445,7 +445,84 @@ router.get("/:id", auth, memberController.getMemberById);
  *             schema:
  *               $ref: '#/components/schemas/Member'
  */
-router.put("/:id", auth, roleGuard("admin"), uploadMiddleware, memberController.updateMember);
+router.put("/:id", auth, uploadMiddleware, memberController.updateMember);
+
+/**
+ * @swagger
+ * /api/members/profile:
+ *   put:
+ *     summary: Update current user's member profile
+ *     tags: [Members]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               memberName:
+ *                 type: string
+ *               mobile1:
+ *                 type: string
+ *               mobile2:
+ *                 type: string
+ *               organizationName:
+ *                 type: string
+ *               businessTagline:
+ *                 type: string
+ *               organizationMobileNo:
+ *                 type: string
+ *               organizationEmail:
+ *                 type: string
+ *               orgAddressLine1:
+ *                 type: string
+ *               orgAddressLine2:
+ *                 type: string
+ *               orgLocation:
+ *                 type: string
+ *               orgPincode:
+ *                 type: string
+ *               organizationWebsite:
+ *                 type: string
+ *               organizationDescription:
+ *                 type: string
+ *               addressLine1:
+ *                 type: string
+ *               addressLine2:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *               pincode:
+ *                 type: string
+ *               specificAsk:
+ *                 type: string
+ *               specificGive:
+ *                 type: string
+ *               clients:
+ *                 type: string
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *               coverPhoto:
+ *                 type: string
+ *                 format: binary
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Member'
+ *       404:
+ *         description: Member profile not found
+ *       403:
+ *         description: Forbidden - Can only update own profile
+ */
+router.put("/profile", auth, uploadMiddleware, memberController.updateOwnProfile);
 
 /**
  * @swagger

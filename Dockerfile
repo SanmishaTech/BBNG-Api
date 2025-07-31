@@ -1,34 +1,32 @@
-# Use official Node.js image as build stage
-FROM node:18 AS builder
+FROM node:18-alpine
 
-WORKDIR /app
+# Create app directory
+WORKDIR /usr/src/app
 
-# Install dependencies
+# Install app dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
 
-# Copy source files
+# Bundle app source
 COPY . .
 
-# Production image
-FROM node:18-slim
+# Generate Prisma client
+COPY prisma ./prisma
+RUN npx prisma generate
 
-WORKDIR /app
+# ------------------- FIX START -------------------
+# Set build-time arguments
+ARG DATABASE_URL
 
-# Install OpenSSL for Prisma and ffmpeg
-RUN apt-get update -y && apt-get install -y openssl
+# Create environment file as root
+RUN if [ -n "$DATABASE_URL" ]; then \
+      echo "DATABASE_URL=$DATABASE_URL" > /usr/src/app/.env; \
+    fi
 
-# Copy only necessary files from builder
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.env ./
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/server.js ./
+# Switch to non-root user
+USER node
+# -------------------- FIX END --------------------
 
-# Expose port (match your .env PORT)
+# Expose port and start
 EXPOSE 3000
-
-# Start the app with migration
-# CMD npx prisma migrate dev --name init && npx prisma generate && npm run seed && npm start
-CMD npx prisma generate && npm start
+CMD ["node", "server.js"]

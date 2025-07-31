@@ -94,7 +94,7 @@ const { requireChapterRole } = require("../middleware/requireChapterRole");
  *                 totalCategories:
  *                   type: integer
  */
-router.get("/", auth, requireChapterRole('OB'), categoryController.getCategories);
+router.get("/", auth, categoryController.getCategories);
 
 /**
  * @swagger
@@ -118,7 +118,7 @@ router.get("/", auth, requireChapterRole('OB'), categoryController.getCategories
  *       404:
  *         description: Category not found
  */
-router.get("/:id", auth, requireChapterRole('OB'), categoryController.getCategoryById);
+router.get("/:id", auth, categoryController.getCategoryById);
 
 /**
  * @swagger
@@ -151,7 +151,7 @@ router.get("/:id", auth, requireChapterRole('OB'), categoryController.getCategor
  *       400:
  *         description: Bad request
  */
-router.post("/", auth, requireChapterRole('OB'), categoryController.createCategory);
+router.post("/", auth, categoryController.createCategory);
 
 /**
  * @swagger
@@ -187,7 +187,7 @@ router.post("/", auth, requireChapterRole('OB'), categoryController.createCatego
  *       404:
  *         description: Category not found
  */
-router.put("/:id", auth, requireChapterRole('OB'), categoryController.updateCategory);
+router.put("/:id", auth, categoryController.updateCategory);
 
 /**
  * @swagger
@@ -214,6 +214,6 @@ router.put("/:id", auth, requireChapterRole('OB'), categoryController.updateCate
  *       404:
  *         description: Category not found
  */
-router.delete("/:id", auth, requireChapterRole('OB'), categoryController.deleteCategory);
+router.delete("/:id", auth, categoryController.deleteCategory);
 
 module.exports = router;

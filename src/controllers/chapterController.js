@@ -3,8 +3,8 @@ const prisma = new PrismaClient();
 const { z } = require("zod");
 const validateRequest = require("../utils/validateRequest");
 const createError = require("http-errors");
-const {updateBankClosingBalance} = require("./transactionController");  
-const {updateCashClosingBalance} = require("./transactionController");    
+const { updateBankClosingBalance } = require("./transactionController");
+const { updateCashClosingBalance } = require("./transactionController");
 
 /**
  * Wrap async route handlers and funnel errors through Express error middleware.
@@ -226,7 +226,8 @@ const deleteChapter = asyncHandler(async (req, res) => {
 
   // Check if chapter exists
   const existingChapter = await prisma.chapter.findUnique({ where: { id } });
-  if (!existingChapter) throw createError(404, `Chapter with ID ${id} not found.`);
+  if (!existingChapter)
+    throw createError(404, `Chapter with ID ${id} not found.`);
 
   // Check for dependent entities
   const membersCount = await prisma.member.count({
@@ -258,7 +259,12 @@ const deleteChapter = asyncHandler(async (req, res) => {
   // if (messagesCount > 0) dependencies.push(`${messagesCount} message(s)`);
 
   if (dependencies.length > 0) {
-    throw createError(400, `Cannot delete Chapter ID ${id}. It is still referenced by ${dependencies.join(", ")}. Please remove or reassign these dependencies first.`);
+    throw createError(
+      400,
+      `Cannot delete Chapter ID ${id}. It is still referenced by ${dependencies.join(
+        ", "
+      )}. Please remove or reassign these dependencies first.`
+    );
   }
 
   try {
@@ -272,7 +278,10 @@ const deleteChapter = asyncHandler(async (req, res) => {
         `Foreign key constraint error deleting chapter ID ${id}:`,
         error
       );
-      throw createError(409, `Cannot delete Chapter ID ${id} due to existing relationships that were not pre-checked. Details: ${error.message}`);
+      throw createError(
+        409,
+        `Cannot delete Chapter ID ${id} due to existing relationships that were not pre-checked. Details: ${error.message}`
+      );
     } else if (error.code === "P2025") {
       // This case should be caught by the initial findUnique check, but good to have a specific catch.
       throw createError(404, `Chapter with ID ${id} not found for deletion.`);
@@ -348,9 +357,9 @@ const getChapterRoleHistory = asyncHandler(async (req, res) => {
         crh.roleType ASC, 
         crh.startDate DESC
     `;
-    
+
     // Transform the result to match the expected format
-    const formattedHistory = history.map(item => ({
+    const formattedHistory = history.map((item) => ({
       id: item.id,
       roleId: item.roleId,
       memberId: item.memberId,
@@ -365,14 +374,16 @@ const getChapterRoleHistory = asyncHandler(async (req, res) => {
         id: item.memberId,
         memberName: item.memberName,
         email: item.email,
-        mobile1: item.mobile1
-      }
+        mobile1: item.mobile1,
+      },
     }));
-    
+
     res.json(formattedHistory);
   } catch (error) {
-    console.error('Error fetching chapter role history:', error);
-    res.status(500).json({ message: 'Failed to fetch role history', error: error.message });
+    console.error("Error fetching chapter role history:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch role history", error: error.message });
   }
 });
 
@@ -385,18 +396,22 @@ const assignChapterRole = asyncHandler(async (req, res) => {
 
   const schema = z.object({
     memberId: z.number().int().positive("Member ID must be a positive integer"),
-    roleType: z.enum([
-      "chapterHead",
-      "secretary",
-      "treasurer",
-      "guardian",
-      "districtCoordinator", 
-      "regionalCoordinator"
-    ], {
-      errorMap: () => ({ 
-        message: "Role type must be one of: chapterHead, secretary, treasurer, guardian, districtCoordinator, regionalCoordinator" 
-      }),
-    }),
+    roleType: z.enum(
+      [
+        "chapterHead",
+        "secretary",
+        "treasurer",
+        "guardian",
+        "districtCoordinator",
+        "regionalCoordinator",
+      ],
+      {
+        errorMap: () => ({
+          message:
+            "Role type must be one of: chapterHead, secretary, treasurer, guardian, districtCoordinator, regionalCoordinator",
+        }),
+      }
+    ),
   });
 
   const valid = await validateRequest(schema, req.body, res);
@@ -430,14 +445,14 @@ const assignChapterRole = asyncHandler(async (req, res) => {
   try {
     let role;
     let createdHistory;
-    
+
     // Using sequential operations instead of transaction due to potential issues
     // with the prisma client in transaction mode
-    
+
     if (existingRole) {
       // DO NOT close previous history records - we want to keep full history
       // Just create a new history record for the changed assignment
-      
+
       // First, create a new history record for the changed assignment
       await prisma.$executeRawUnsafe(
         `INSERT INTO chapter_role_history 
@@ -455,12 +470,12 @@ const assignChapterRole = asyncHandler(async (req, res) => {
       // Update the role assignment
       role = await prisma.chapterRole.update({
         where: { id: existingRole.id },
-        data: { 
+        data: {
           memberId: req.body.memberId,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
       });
-      
+
       // Set createdHistory to true to indicate success
       createdHistory = true;
     } else {
@@ -487,11 +502,11 @@ const assignChapterRole = asyncHandler(async (req, res) => {
         chapterId,
         req.body.roleType
       );
-      
+
       // Set createdHistory to true to indicate success
       createdHistory = true;
     }
-    
+
     // Verify that both operations succeeded
     if (!role || !createdHistory) {
       throw new Error("Failed to complete role assignment process");
@@ -525,7 +540,7 @@ const assignChapterRole = asyncHandler(async (req, res) => {
 const removeChapterRole = asyncHandler(async (req, res) => {
   const chapterId = parseInt(req.params.chapterId);
   const roleId = parseInt(req.params.roleId);
-  
+
   if (!chapterId) throw createError(400, "Invalid chapter ID");
   if (!roleId) throw createError(400, "Invalid role ID");
 
@@ -533,7 +548,8 @@ const removeChapterRole = asyncHandler(async (req, res) => {
     where: { id: roleId },
   });
   if (!role) throw createError(404, "Role assignment not found");
-  if (role.chapterId !== chapterId) throw createError(400, "Role does not belong to the specified chapter");
+  if (role.chapterId !== chapterId)
+    throw createError(400, "Role does not belong to the specified chapter");
 
   // Get the current user making the change
   const performedById = req.user?.id;
@@ -541,7 +557,7 @@ const removeChapterRole = asyncHandler(async (req, res) => {
 
   try {
     // Sequential operations instead of transaction to avoid Prisma model issues
-    
+
     // DO NOT close previous history records - we want to keep full history
     // Just create a new history record for the removal
 

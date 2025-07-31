@@ -18,7 +18,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://47.128.201.96/",
+        url: "http://localhost:3000/",
         description: "Development server"
       },
     ],
